@@ -51,6 +51,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Actuator: expone /actuator/health, usado como Health Check Path en Render -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Lombok: reduce boilerplate en entidades/DTOs -->
         <dependency>
             <groupId>org.projectlombok</groupId>
