@@ -16,14 +16,6 @@ async function handleCreate() {
   await store.addHabit({ name: newHabitName.value.trim() })
   newHabitName.value = ''
 }
-
-async function handleToggle(id: number, completed: boolean) {
-  await store.toggleToday(id, completed)
-}
-
-async function handleRemove(id: number) {
-  await store.removeHabit(id)
-}
 </script>
 
 <template>
@@ -37,22 +29,24 @@ async function handleRemove(id: number) {
       </form>
 
       <p v-if="store.loading" class="status-text">Cargando...</p>
-      <p v-else-if="store.error" class="status-text status-text--error">{{ store.error }}</p>
 
-      <div v-else-if="store.habits.length === 0" class="empty-state">
-        <p>Aún no hay entradas en tu cuaderno.</p>
-        <p class="empty-state__hint">Añade tu primer hábito arriba para empezar a llevar el registro.</p>
-      </div>
+      <template v-else>
+        <p v-if="store.error" class="status-text status-text--error">{{ store.error }}</p>
 
-      <div v-else>
-        <HabitCard
-          v-for="habit in store.habits"
-          :key="habit.id"
-          :habit="habit"
-          @toggle="handleToggle"
-          @remove="handleRemove"
-        />
-      </div>
+        <div v-if="store.habits.length === 0 && !store.error" class="empty-state">
+          <p>Aún no hay entradas en tu cuaderno.</p>
+          <p class="empty-state__hint">Añade tu primer hábito arriba para empezar a llevar el registro.</p>
+        </div>
+
+        <div v-else-if="store.habits.length > 0">
+          <HabitCard
+            v-for="habit in store.habits"
+            :key="habit.id"
+            :habit="habit"
+            :completed-today="store.completedToday.has(habit.id)"
+          />
+        </div>
+      </template>
     </section>
 
     <aside>

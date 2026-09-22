@@ -1,22 +1,33 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useHabitStore } from '@/stores/habitStore'
 import type { Habit } from '@/types/habit'
 
-defineProps<{
+const props = defineProps<{
   habit: Habit
+  completedToday: boolean
 }>()
 
-const emit = defineEmits<{
-  toggle: [id: number, completed: boolean]
-  remove: [id: number]
-}>()
+const habitStore = useHabitStore()
+const pulsing = ref(false)
+const pending = ref(false)
 
-const stamped = ref(false)
+async function handleToggle() {
+  if (pending.value) return
+  pending.value = true
+  pulsing.value = true
+  try {
+    await habitStore.toggleToday(props.habit.id, !props.completedToday)
+  } catch {
+    // el error ya queda expuesto en habitStore.error para que la vista lo muestre
+  } finally {
+    pending.value = false
+    window.setTimeout(() => (pulsing.value = false), 260)
+  }
+}
 
-function handleToggle(id: number) {
-  emit('toggle', id, true)
-  stamped.value = true
-  window.setTimeout(() => (stamped.value = false), 260)
+async function handleRemove() {
+  await habitStore.removeHabit(props.habit.id)
 }
 </script>
 
@@ -31,12 +42,13 @@ function handleToggle(id: number) {
       <button
         type="button"
         class="stamp-button"
-        :class="{ 'stamp-button--active': stamped }"
-        @click="handleToggle(habit.id)"
+        :class="{ 'stamp-button--done': completedToday, 'stamp-button--pulse': pulsing }"
+        :disabled="pending"
+        @click="handleToggle"
       >
-        Marcar hoy
+        {{ completedToday ? 'Hecho hoy ✓' : 'Marcar hoy' }}
       </button>
-      <button type="button" class="text-button" @click="emit('remove', habit.id)">Eliminar</button>
+      <button type="button" class="text-button" @click="handleRemove">Eliminar</button>
     </div>
   </article>
 </template>
@@ -84,10 +96,18 @@ function handleToggle(id: number) {
   transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
-.stamp-button--active {
+.stamp-button--done {
   background: var(--color-moss);
   color: var(--color-paper-raised);
+}
+
+.stamp-button--pulse {
   transform: scale(1.06);
+}
+
+.stamp-button:disabled {
+  opacity: 0.7;
+  cursor: default;
 }
 
 .text-button {

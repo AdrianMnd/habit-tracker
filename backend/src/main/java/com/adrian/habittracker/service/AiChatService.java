@@ -1,13 +1,16 @@
 package com.adrian.habittracker.service;
 
-import com.adrian.habittracker.dto.AiChatResponse;
 import com.adrian.habittracker.dto.HabitResponse;
 import com.adrian.habittracker.exception.AiServiceException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -16,15 +19,20 @@ import java.util.Map;
 
 /**
  * Construye el prompt para el chat de recomendacion de habitos y habla con
- * la API de Gemini (endpoint generateContent).
+ * la API de Gemini en modo streaming (endpoint streamGenerateContent).
  * <p>
- * Le pedimos a Gemini que devuelva JSON estructurado directamente
- * (generationConfig.responseSchema), en vez de confiar en que el modelo
- * "se porte bien" solo con instrucciones en el prompt.
+ * El modelo responde en texto plano (lo que permite mostrarlo token a token
+ * segun llega) y, si tiene sugerencias de habitos, las añade al final tras
+ * un delimitador. El backend se limita a reenviar el texto en crudo tal
+ * cual llega de Gemini; el parseo del delimitador y del JSON de sugerencias
+ * ocurre en el frontend una vez el stream termina.
  */
 @Service
 @RequiredArgsConstructor
 public class AiChatService {
+
+    /** Debe coincidir EXACTAMENTE con HABIT_LINE_PREFIX en useHabitChat.ts (frontend). */
+    public static final String HABIT_LINE_PREFIX = "HABITO::";
 
     private static final String SYSTEM_INSTRUCTION = """
             Eres el asistente de habitos dentro de la aplicacion Habit Tracker.
@@ -39,15 +47,26 @@ public class AiChatService {
             3. Si el mensaje no encaja en ninguno de los dos casos, responde de
                forma util y breve, sin forzar sugerencias.
 
-            Reglas:
+            Reglas de contenido:
             - Responde siempre en español, con un tono cercano, breve y motivador
               (evita parrafos largos).
             - Cada habito sugerido debe ser especifico y realizable en un solo dia
               (evita objetivos vagos como "ser mas saludable").
             - No repitas habitos que el usuario ya tiene registrados.
-            - Si no tienes ninguna sugerencia concreta que aportar, devuelve la
-              lista de sugerencias vacia; no la rellenes por rellenar.
-            """;
+
+            Formato de tu respuesta (IMPORTANTE, siguelo al pie de la letra):
+            1. Escribe tu respuesta conversacional en texto plano, sin JSON ni
+               markdown ni listas con guiones o asteriscos.
+            2. Si tienes habitos que sugerir, añade cada uno en una linea NUEVA,
+               al final de tu respuesta, con este formato EXACTO, sin nada mas
+               delante (ni guion, ni numero, ni espacio):
+               %s <nombre corto> :: <descripcion breve>
+               Ejemplo:
+               %s Beber un vaso de agua :: Nada mas levantarte, antes del cafe
+               %s Reducir pantallas en comidas :: Deja el movil fuera de la mesa
+            3. Si no tienes ninguna sugerencia concreta que aportar, no escribas
+               ninguna linea con ese formato; no la rellenes por rellenar.
+            """.formatted(HABIT_LINE_PREFIX, HABIT_LINE_PREFIX, HABIT_LINE_PREFIX);
 
     private final WebClient geminiWebClient;
     private final HabitService habitService;
@@ -59,27 +78,34 @@ public class AiChatService {
     @Value("${gemini.api.model}")
     private String model;
 
-    public AiChatResponse chat(String userMessage) {
+    /**
+     * Devuelve un flujo de fragmentos de texto segun los va generando Gemini.
+     * El controlador se limita a exponer este Flux como Server-Sent Events.
+     */
+    public Flux<String> streamChat(String userMessage) {
         if (apiKey == null || apiKey.isBlank()) {
-            throw new AiServiceException("La clave de la API de Gemini no esta configurada (GEMINI_API_KEY)");
+            return Flux.error(new AiServiceException(
+                    "La clave de la API de Gemini no esta configurada (GEMINI_API_KEY)"));
         }
 
         String habitsContext = buildHabitsContext();
         Map<String, Object> requestBody = buildRequestBody(habitsContext, userMessage);
 
-        Map<?, ?> rawResponse = geminiWebClient.post()
+        return geminiWebClient.post()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/models/{model}:generateContent")
+                        .path("/models/{model}:streamGenerateContent")
+                        .queryParam("alt", "sse")
                         .queryParam("key", apiKey)
                         .build(model))
                 .bodyValue(requestBody)
                 .retrieve()
-                .bodyToMono(Map.class)
-                .timeout(Duration.ofSeconds(20))
-                .block();
-
-        String jsonText = extractText(rawResponse);
-        return parseResponse(jsonText);
+                .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
+                .mapNotNull(ServerSentEvent::data)
+                .map(this::extractDeltaText)
+                .filter(text -> !text.isEmpty())
+                .timeout(Duration.ofSeconds(30))
+                .onErrorMap(e -> !(e instanceof AiServiceException),
+                        e -> new AiServiceException("Fallo el streaming con Gemini", e));
     }
 
     private String buildHabitsContext() {
@@ -104,53 +130,25 @@ public class AiChatService {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("systemInstruction", systemInstruction);
         body.put("contents", List.of(userContent));
-        body.put("generationConfig", generationConfig());
+        // Temperatura baja: menos "creatividad", mas consistencia siguiendo
+        // el formato de lineas HABITO:: que necesitamos parsear despues.
+        body.put("generationConfig", Map.of("temperature", 0.4));
         return body;
     }
 
-    private Map<String, Object> generationConfig() {
-        Map<String, Object> nameProp = Map.of("type", "STRING");
-        Map<String, Object> descriptionProp = Map.of("type", "STRING");
-
-        Map<String, Object> suggestionItem = new LinkedHashMap<>();
-        suggestionItem.put("type", "OBJECT");
-        suggestionItem.put("properties", Map.of("name", nameProp, "description", descriptionProp));
-        suggestionItem.put("required", List.of("name"));
-
-        Map<String, Object> suggestionsArray = new LinkedHashMap<>();
-        suggestionsArray.put("type", "ARRAY");
-        suggestionsArray.put("items", suggestionItem);
-
-        Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("type", "OBJECT");
-        schema.put("properties", Map.of("reply", Map.of("type", "STRING"), "suggestions", suggestionsArray));
-        schema.put("required", List.of("reply", "suggestions"));
-
-        Map<String, Object> config = new LinkedHashMap<>();
-        config.put("responseMimeType", "application/json");
-        config.put("responseSchema", schema);
-        return config;
-    }
-
-    @SuppressWarnings("unchecked")
-    private String extractText(Map<?, ?> rawResponse) {
+    /**
+     * Cada evento SSE de Gemini trae un fragmento de la respuesta en
+     * candidates[0].content.parts[0].text. Si el fragmento no trae texto
+     * (p. ej. un evento de metadatos), devolvemos cadena vacia y el Flux lo
+     * descarta con el filter().
+     */
+    private String extractDeltaText(String eventDataJson) {
         try {
-            List<Object> candidates = (List<Object>) rawResponse.get("candidates");
-            Map<String, Object> firstCandidate = (Map<String, Object>) candidates.get(0);
-            Map<String, Object> content = (Map<String, Object>) firstCandidate.get("content");
-            List<Object> parts = (List<Object>) content.get("parts");
-            Map<String, Object> firstPart = (Map<String, Object>) parts.get(0);
-            return (String) firstPart.get("text");
-        } catch (RuntimeException e) {
-            throw new AiServiceException("Respuesta inesperada de Gemini: " + rawResponse, e);
-        }
-    }
-
-    private AiChatResponse parseResponse(String jsonText) {
-        try {
-            return objectMapper.readValue(jsonText, AiChatResponse.class);
+            JsonNode root = objectMapper.readTree(eventDataJson);
+            JsonNode textNode = root.path("candidates").path(0).path("content").path("parts").path(0).path("text");
+            return textNode.isMissingNode() ? "" : textNode.asText();
         } catch (Exception e) {
-            throw new AiServiceException("No se pudo interpretar la respuesta de Gemini", e);
+            return "";
         }
     }
 }

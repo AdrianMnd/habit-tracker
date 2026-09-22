@@ -57,7 +57,7 @@ async function handleAddSuggestion(suggestion: HabitSuggestion) {
         </ul>
       </div>
 
-      <p v-if="sending" class="chat-status">Pensando...</p>
+      <p v-if="sending && !messages[messages.length - 1]?.text" class="chat-status">Pensando...</p>
       <p v-if="error" class="chat-status chat-status--error">{{ error }}</p>
     </div>
 
