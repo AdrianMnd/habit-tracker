@@ -8,6 +8,10 @@ export const useHabitStore = defineStore('habits', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  // Ids de habitos marcados como cumplidos hoy (estado local, se resetea
+  // al recargar la pagina; el estado real vive en el backend via /logs).
+  const completedToday = ref(new Set<number>())
+
   async function fetchHabits() {
     loading.value = true
     error.value = null
@@ -29,12 +33,24 @@ export const useHabitStore = defineStore('habits', () => {
   async function removeHabit(id: number) {
     await habitApi.remove(id)
     habits.value = habits.value.filter((h) => h.id !== id)
+    completedToday.value.delete(id)
   }
 
   async function toggleToday(id: number, completed: boolean) {
     const today = new Date().toISOString().slice(0, 10)
-    await habitApi.logCompletion(id, { logDate: today, completed })
+    error.value = null
+    try {
+      await habitApi.logCompletion(id, { logDate: today, completed })
+      if (completed) {
+        completedToday.value.add(id)
+      } else {
+        completedToday.value.delete(id)
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'No se pudo marcar el habito'
+      throw e
+    }
   }
 
-  return { habits, loading, error, fetchHabits, addHabit, removeHabit, toggleToday }
+  return { habits, loading, error, completedToday, fetchHabits, addHabit, removeHabit, toggleToday }
 })

@@ -82,3 +82,27 @@ input {
     transition: none !important;
   }
 }
+
+/* Scrollbars a juego con el tema, en vez de la barra clara por defecto del navegador */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-stone) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-stone);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-moss);
+}

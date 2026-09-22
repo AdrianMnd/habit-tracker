@@ -30,11 +30,6 @@ export interface AiChatRequest {
   message: string
 }
 
-export interface AiChatResponse {
-  reply: string
-  suggestions: HabitSuggestion[]
-}
-
 export interface ChatMessage {
   role: 'user' | 'assistant'
   text: string
