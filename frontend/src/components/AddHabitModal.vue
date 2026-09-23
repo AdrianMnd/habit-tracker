@@ -85,6 +85,10 @@ async function handleSubmit() {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Sin este padding, en una pantalla mas estrecha que 380px (el
+     max-width de la modal) el "width: 100%" de .modal tocaria los bordes
+     del todo, pegado al cristal - se ve peor y es mas incomodo de tocar. */
+  padding: var(--space-4);
   z-index: 100;
 }
 

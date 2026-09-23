@@ -4,6 +4,7 @@ import { useHabitStore } from '@/stores/habitStore'
 import HabitCard from '@/components/HabitCard.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
 import AddHabitModal from '@/components/AddHabitModal.vue'
+import StatsSummary from '@/components/StatsSummary.vue'
 
 const store = useHabitStore()
 const showModal = ref(false)
@@ -14,37 +15,41 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="home-view">
-    <section class="ledger">
-      <div class="ledger__header">
-        <h2>Mis hábitos</h2>
-        <button type="button" class="add-button" @click="showModal = true">+ Añadir hábito</button>
-      </div>
+  <div>
+    <StatsSummary />
 
-      <p v-if="store.loading" class="status-text">Cargando...</p>
-
-      <template v-else>
-        <p v-if="store.error" class="status-text status-text--error">{{ store.error }}</p>
-
-        <div v-if="store.habits.length === 0 && !store.error" class="empty-state">
-          <p>Aún no hay entradas en tu cuaderno.</p>
-          <p class="empty-state__hint">Añade tu primer hábito para empezar a llevar el registro.</p>
+    <div class="home-view">
+      <section class="ledger panel">
+        <div class="ledger__header">
+          <h2>Mis hábitos</h2>
+          <button type="button" class="add-button" @click="showModal = true">+ Añadir hábito</button>
         </div>
 
-        <div v-else-if="store.habits.length > 0">
-          <HabitCard
-            v-for="habit in store.habits"
-            :key="habit.id"
-            :habit="habit"
-            :completed-today="store.completedToday.has(habit.id)"
-          />
-        </div>
-      </template>
-    </section>
+        <p v-if="store.loading" class="status-text">Cargando...</p>
 
-    <aside>
-      <ChatPanel />
-    </aside>
+        <template v-else>
+          <p v-if="store.error" class="status-text status-text--error">{{ store.error }}</p>
+
+          <div v-if="store.habits.length === 0 && !store.error" class="empty-state">
+            <p>Aún no hay entradas en tu cuaderno.</p>
+            <p class="empty-state__hint">Añade tu primer hábito para empezar a llevar el registro.</p>
+          </div>
+
+          <div v-else-if="store.habits.length > 0">
+            <HabitCard
+              v-for="habit in store.habits"
+              :key="habit.id"
+              :habit="habit"
+              :completed-today="store.completedToday.has(habit.id)"
+            />
+          </div>
+        </template>
+      </section>
+
+      <aside>
+        <ChatPanel />
+      </aside>
+    </div>
 
     <AddHabitModal v-if="showModal" @close="showModal = false" />
   </div>
@@ -55,12 +60,20 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: var(--space-12);
-  align-items: start;
+  /* Sin "align-items", el valor por defecto de CSS Grid es "stretch":
+     cada columna ocupa toda la altura de la fila, no solo la de su propio
+     contenido - es lo que permite que el chat pueda crecer tanto como la
+     lista de habitos en vez de quedarse en su tamano minimo. */
+  min-height: calc(100vh - 220px);
 }
 
 @media (max-width: 720px) {
   .home-view {
     grid-template-columns: 1fr;
+    /* En movil, apiladas una encima de otra, cada seccion debe medir
+       solo lo que necesite - forzar la altura de la ventana aqui dejaria
+       un hueco vacio enorme debajo si el chat esta vacio. */
+    min-height: auto;
   }
 }
 

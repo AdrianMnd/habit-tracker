@@ -19,6 +19,12 @@ export interface HabitLogRequest {
   completed: boolean
 }
 
+export interface HabitsSummary {
+  activeHabits: number
+  averageStreak: number
+  averageWeeklyCompletionRate: number
+}
+
 export interface HabitWeekEntry {
   habitId: number
   habitName: string

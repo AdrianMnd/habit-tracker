@@ -83,7 +83,7 @@ watch(weekStart, fetchWeek)
 </script>
 
 <template>
-  <div class="week-view">
+  <div class="week-view panel">
     <div class="week-view__header">
       <h2>Calendario semanal</h2>
       <div class="week-nav">
@@ -100,8 +100,9 @@ watch(weekStart, fetchWeek)
       <p>Aún no tienes hábitos que mostrar aquí. Añade alguno desde "Mis hábitos".</p>
     </div>
 
-    <table v-else class="week-table">
-      <thead>
+    <div v-else class="week-table-scroll">
+      <table class="week-table">
+        <thead>
         <tr>
           <th class="week-table__habit-col">Hábito</th>
           <th v-for="(day, i) in weekDays" :key="i" :class="{ 'is-today': isToday(day) }">
@@ -126,8 +127,9 @@ watch(weekStart, fetchWeek)
             </button>
           </td>
         </tr>
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
@@ -191,6 +193,13 @@ watch(weekStart, fetchWeek)
   margin: 0;
 }
 
+.week-table-scroll {
+  /* overflow-x en este contenedor, no en la pagina entera: en movil, la
+     tabla de 7 dias + nombre puede ser mas ancha que la pantalla, pero
+     solo ella debe desplazarse lateralmente, no toda la app. */
+  overflow-x: auto;
+}
+
 .week-table {
   border-collapse: collapse;
   width: 100%;
@@ -213,6 +222,23 @@ watch(weekStart, fetchWeek)
   min-width: 160px;
 }
 
+@media (max-width: 640px) {
+  .week-table__habit-col {
+    min-width: 110px;
+    max-width: 110px;
+    font-size: 0.85rem;
+    /* "position: sticky" fija esta columna mientras el resto de la tabla
+       se desplaza por debajo - asi nunca pierdes de vista a que habito
+       corresponde cada fila, aunque hayas hecho scroll hasta el domingo.
+       No es lo mismo que "fixed": sticky sigue formando parte del flujo
+       normal, solo se "pega" al borde cuando intentas hacerla salir. */
+    position: sticky;
+    left: 0;
+    background: var(--color-paper);
+    z-index: 1;
+  }
+}
+
 .day-number {
   display: block;
   font-size: 0.72rem;
@@ -220,14 +246,27 @@ watch(weekStart, fetchWeek)
 
 th.is-today,
 td.is-today {
-  background: var(--color-moss-soft);
+  /* El tinte estandar (--color-moss-soft, 14% opacidad) se pensaba para
+     superficies grandes; en una celda pequeña, sobre fondo ya oscuro,
+     resultaba casi imperceptible. Subimos la opacidad solo aqui. */
+  background: rgba(124, 184, 138, 0.22);
+}
+
+th.is-today {
+  /* Ademas del tinte de fondo, un borde inferior marcado: no dependemos
+     solo de una diferencia sutil de color para que se note cual es hoy. */
+  border-bottom: 2px solid var(--color-moss);
 }
 
 .day-cell {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 1px solid var(--color-stone);
+  /* Antes usaba --color-stone (#2a362c), casi el mismo tono que el fondo
+     de la pagina (#141f19) - el aro de los dias sin marcar practicamente
+     no se veia. --color-ink-soft es mas claro y se distingue con claridad
+     sobre cualquier fondo oscuro, este resaltado o no. */
+  border: 1.5px solid var(--color-ink-soft);
   background: transparent;
   color: var(--color-moss);
   font-size: 0.85rem;

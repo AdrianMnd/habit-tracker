@@ -112,6 +112,34 @@ public class HabitService {
         return new HabitWeekEntry(habit.getId(), habit.getName(), days);
     }
 
+    /**
+     * Resumen agregado para el dashboard: racha media y % de cumplimiento
+     * semanal medio a traves de TODOS los habitos del usuario, en una sola
+     * llamada (reutiliza los mismos helpers privados que calculateStreak,
+     * asi que la logica de calculo vive en un solo sitio).
+     */
+    public HabitsSummaryResponse getSummary(Long userId) {
+        List<Habit> habits = habitRepository.findByUserId(userId);
+        if (habits.isEmpty()) {
+            return new HabitsSummaryResponse(0, 0, 0);
+        }
+
+        double totalStreak = 0;
+        double totalWeeklyRate = 0;
+
+        for (Habit habit : habits) {
+            List<HabitLog> logs = habitLogRepository.findByHabitIdOrderByLogDateDesc(habit.getId());
+            Map<LocalDate, Boolean> completionByDate = logs.stream()
+                    .collect(Collectors.toMap(HabitLog::getLogDate, HabitLog::isCompleted, (a, b) -> a));
+
+            totalStreak += computeCurrentStreak(completionByDate);
+            totalWeeklyRate += computeWeeklyCompletionRate(completionByDate);
+        }
+
+        int count = habits.size();
+        return new HabitsSummaryResponse(count, totalStreak / count, totalWeeklyRate / count);
+    }
+
     public StreakResponse calculateStreak(Long habitId, Long userId) {
         getOwnedHabitOrThrow(habitId, userId); // valida propiedad antes de calcular
 

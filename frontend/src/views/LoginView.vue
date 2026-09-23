@@ -21,7 +21,7 @@ async function handleSubmit() {
 
 <template>
   <div class="auth-view">
-    <form class="auth-form" @submit.prevent="handleSubmit">
+    <form class="auth-form panel" @submit.prevent="handleSubmit">
       <h2>Iniciar sesión</h2>
 
       <label>
@@ -76,7 +76,7 @@ label {
 
 input {
   border: 1px solid var(--color-stone);
-  background: var(--color-paper-raised);
+  background: var(--color-paper);
   border-radius: 6px;
   padding: var(--space-2) var(--space-3);
   color: var(--color-ink);
