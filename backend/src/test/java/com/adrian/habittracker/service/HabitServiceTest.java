@@ -5,6 +5,7 @@ import com.adrian.habittracker.entity.Habit;
 import com.adrian.habittracker.entity.HabitLog;
 import com.adrian.habittracker.repository.HabitLogRepository;
 import com.adrian.habittracker.repository.HabitRepository;
+import com.adrian.habittracker.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,11 +23,16 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class HabitServiceTest {
 
+    private static final Long USER_ID = 99L;
+
     @Mock
     private HabitRepository habitRepository;
 
     @Mock
     private HabitLogRepository habitLogRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private HabitService habitService;
@@ -51,10 +57,10 @@ class HabitServiceTest {
                 logOn(today.minusDays(3), false) // rompe la racha
         );
 
-        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(habitRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(habit));
         when(habitLogRepository.findByHabitIdOrderByLogDateDesc(1L)).thenReturn(logs);
 
-        StreakResponse result = habitService.calculateStreak(1L);
+        StreakResponse result = habitService.calculateStreak(1L, USER_ID);
 
         assertThat(result.currentStreak()).isEqualTo(3);
     }
@@ -68,10 +74,10 @@ class HabitServiceTest {
                 logOn(today.minusDays(1), true)
         );
 
-        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(habitRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(habit));
         when(habitLogRepository.findByHabitIdOrderByLogDateDesc(1L)).thenReturn(logs);
 
-        StreakResponse result = habitService.calculateStreak(1L);
+        StreakResponse result = habitService.calculateStreak(1L, USER_ID);
 
         assertThat(result.currentStreak()).isZero();
     }
@@ -90,10 +96,10 @@ class HabitServiceTest {
                 logOn(today.minusDays(6), false)
         );
 
-        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(habitRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(habit));
         when(habitLogRepository.findByHabitIdOrderByLogDateDesc(1L)).thenReturn(logs);
 
-        StreakResponse result = habitService.calculateStreak(1L);
+        StreakResponse result = habitService.calculateStreak(1L, USER_ID);
 
         assertThat(result.weeklyCompletionRate()).isEqualTo(4.0 / 7.0);
     }

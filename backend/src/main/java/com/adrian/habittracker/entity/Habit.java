@@ -28,11 +28,23 @@ public class Habit {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     @Column(nullable = false, length = 100)
     private String name;
 
     @Column(length = 255)
     private String description;
+
+    // Nullable a proposito: asi Hibernate puede anadir esta columna con
+    // ddl-auto=update sin fallar sobre filas ya existentes (a diferencia
+    // de cuando anadimos user_id como NOT NULL, que exigio un TRUNCATE).
+    // El valor por defecto se aplica en Java al crear un habito nuevo.
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private Priority priority = Priority.MEDIA;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
