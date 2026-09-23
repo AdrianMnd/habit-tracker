@@ -22,8 +22,9 @@ public class HabitController {
     private final HabitService habitService;
 
     @GetMapping
-    public List<HabitResponse> findAll(@AuthenticationPrincipal UserPrincipal currentUser) {
-        return habitService.findAll(currentUser.getId());
+    public List<HabitResponse> findAll(@RequestParam(required = false) Long categoryId,
+                                        @AuthenticationPrincipal UserPrincipal currentUser) {
+        return habitService.findAll(currentUser.getId(), categoryId);
     }
 
     @GetMapping("/{id}")

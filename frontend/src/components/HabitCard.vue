@@ -8,6 +8,8 @@ const props = defineProps<{
   completedToday: boolean
 }>()
 
+const emit = defineEmits<{ edit: [habit: Habit] }>()
+
 const habitStore = useHabitStore()
 const pulsing = ref(false)
 const pending = ref(false)
@@ -43,6 +45,7 @@ async function handleRemove() {
         <RouterLink :to="`/habits/${habit.id}`" class="entry__name">{{ habit.name }}</RouterLink>
       </div>
       <p v-if="habit.description" class="entry__description">{{ habit.description }}</p>
+      <span v-if="habit.category" class="entry__category">{{ habit.category.name }}</span>
     </div>
 
     <div class="entry__actions">
@@ -55,6 +58,7 @@ async function handleRemove() {
       >
         {{ completedToday ? 'Hecho hoy ✓' : 'Marcar hoy' }}
       </button>
+      <button type="button" class="text-button" @click="emit('edit', habit)">Editar</button>
       <button type="button" class="text-button" @click="handleRemove">Eliminar</button>
     </div>
   </article>
@@ -108,6 +112,16 @@ async function handleRemove() {
 .entry__description {
   margin: var(--space-1) 0 0;
   font-size: 0.9rem;
+  color: var(--color-ink-soft);
+}
+
+.entry__category {
+  display: inline-block;
+  margin-top: var(--space-2);
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-stone);
+  border-radius: 999px;
+  font-size: 0.72rem;
   color: var(--color-ink-soft);
 }
 

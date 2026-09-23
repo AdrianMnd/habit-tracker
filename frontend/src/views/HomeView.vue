@@ -1,16 +1,41 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useHabitStore } from '@/stores/habitStore'
+import { useCategoryStore } from '@/stores/categoryStore'
 import HabitCard from '@/components/HabitCard.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
-import AddHabitModal from '@/components/AddHabitModal.vue'
+import HabitFormModal from '@/components/HabitFormModal.vue'
 import StatsSummary from '@/components/StatsSummary.vue'
+import type { Habit } from '@/types/habit'
 
 const store = useHabitStore()
+const categoryStore = useCategoryStore()
 const showModal = ref(false)
+const editingHabit = ref<Habit | null>(null)
+const categoryFilter = ref<number | ''>('')
+
+function openCreateModal() {
+  editingHabit.value = null
+  showModal.value = true
+}
+
+function openEditModal(habit: Habit) {
+  editingHabit.value = habit
+  showModal.value = true
+}
+
+function closeModal() {
+  showModal.value = false
+  editingHabit.value = null
+}
 
 onMounted(() => {
   store.fetchHabits()
+  categoryStore.fetchCategories()
+})
+
+watch(categoryFilter, (value) => {
+  store.fetchHabits(value || undefined)
 })
 </script>
 
@@ -22,7 +47,15 @@ onMounted(() => {
       <section class="ledger panel">
         <div class="ledger__header">
           <h2>Mis hábitos</h2>
-          <button type="button" class="add-button" @click="showModal = true">+ Añadir hábito</button>
+          <div class="ledger__header-actions">
+            <select v-model="categoryFilter" class="category-filter">
+              <option value="">Todas las categorías</option>
+              <option v-for="category in categoryStore.categories" :key="category.id" :value="category.id">
+                {{ category.name }}
+              </option>
+            </select>
+            <button type="button" class="add-button" @click="openCreateModal">+ Añadir hábito</button>
+          </div>
         </div>
 
         <p v-if="store.loading" class="status-text">Cargando...</p>
@@ -41,6 +74,7 @@ onMounted(() => {
               :key="habit.id"
               :habit="habit"
               :completed-today="store.completedToday.has(habit.id)"
+              @edit="openEditModal"
             />
           </div>
         </template>
@@ -51,7 +85,7 @@ onMounted(() => {
       </aside>
     </div>
 
-    <AddHabitModal v-if="showModal" @close="showModal = false" />
+    <HabitFormModal v-if="showModal" :habit="editingHabit" @close="closeModal" />
   </div>
 </template>
 
@@ -82,6 +116,23 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.ledger__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.category-filter {
+  border: 1px solid var(--color-stone);
+  background: var(--color-paper);
+  color: var(--color-ink-soft);
+  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.85rem;
 }
 
 .ledger__header h2 {

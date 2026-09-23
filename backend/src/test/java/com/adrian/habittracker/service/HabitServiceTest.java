@@ -3,6 +3,7 @@ package com.adrian.habittracker.service;
 import com.adrian.habittracker.dto.StreakResponse;
 import com.adrian.habittracker.entity.Habit;
 import com.adrian.habittracker.entity.HabitLog;
+import com.adrian.habittracker.repository.CategoryRepository;
 import com.adrian.habittracker.repository.HabitLogRepository;
 import com.adrian.habittracker.repository.HabitRepository;
 import com.adrian.habittracker.repository.UserRepository;
@@ -33,6 +34,9 @@ class HabitServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
 
     @InjectMocks
     private HabitService habitService;

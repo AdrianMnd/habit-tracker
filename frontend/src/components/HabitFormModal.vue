@@ -1,24 +1,31 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useHabitStore } from '@/stores/habitStore'
 import { useCategoryStore } from '@/stores/categoryStore'
-import type { HabitPriority } from '@/types/habit'
+import type { Habit, HabitPriority } from '@/types/habit'
+
+// Si "habit" viene informado, la modal entra en modo edicion; si no,
+// modo creacion. Un unico componente para los dos casos, en vez de
+// duplicar practicamente el mismo formulario dos veces.
+const props = defineProps<{
+  habit?: Habit | null
+}>()
 
 const emit = defineEmits<{ close: [] }>()
 
 const habitStore = useHabitStore()
 const categoryStore = useCategoryStore()
 
-const name = ref('')
-const description = ref('')
-const priority = ref<HabitPriority>('MEDIA')
-const categoryId = ref<number | ''>('')
+const isEditMode = computed(() => !!props.habit)
+
+const name = ref(props.habit?.name ?? '')
+const description = ref(props.habit?.description ?? '')
+const priority = ref<HabitPriority>(props.habit?.priority ?? 'MEDIA')
+const categoryId = ref<number | ''>(props.habit?.category?.id ?? '')
 const submitting = ref(false)
 const error = ref<string | null>(null)
 
 onMounted(() => {
-  // Si el usuario ya visito "Categorias" antes, esto no vuelve a pedir
-  // nada al backend - solo carga si el store todavia esta vacio.
   if (categoryStore.categories.length === 0) {
     categoryStore.fetchCategories()
   }
@@ -30,16 +37,22 @@ async function handleSubmit() {
   submitting.value = true
   error.value = null
 
+  const payload = {
+    name: name.value.trim(),
+    description: description.value.trim() || undefined,
+    priority: priority.value,
+    categoryId: categoryId.value || undefined
+  }
+
   try {
-    await habitStore.addHabit({
-      name: name.value.trim(),
-      description: description.value.trim() || undefined,
-      priority: priority.value,
-      categoryId: categoryId.value || undefined
-    })
+    if (isEditMode.value && props.habit) {
+      await habitStore.updateHabit(props.habit.id, payload)
+    } else {
+      await habitStore.addHabit(payload)
+    }
     emit('close')
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'No se pudo crear el hábito'
+    error.value = e instanceof Error ? e.message : 'No se pudo guardar el hábito'
   } finally {
     submitting.value = false
   }
@@ -49,9 +62,9 @@ async function handleSubmit() {
 <template>
   <Teleport to="body">
     <div class="modal-backdrop" @click.self="emit('close')">
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="add-habit-title">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="habit-form-title">
         <div class="modal-header">
-          <h3 id="add-habit-title">Nuevo hábito</h3>
+          <h3 id="habit-form-title">{{ isEditMode ? 'Editar hábito' : 'Nuevo hábito' }}</h3>
           <button type="button" class="close-button" aria-label="Cerrar" @click="emit('close')">✕</button>
         </div>
 
@@ -90,7 +103,8 @@ async function handleSubmit() {
           <div class="modal-actions">
             <button type="button" class="secondary" @click="emit('close')">Cancelar</button>
             <button type="submit" :disabled="submitting || !name.trim()">
-              {{ submitting ? 'Creando...' : 'Añadir' }}
+              <template v-if="isEditMode">{{ submitting ? 'Guardando...' : 'Guardar cambios' }}</template>
+              <template v-else>{{ submitting ? 'Creando...' : 'Añadir' }}</template>
             </button>
           </div>
         </form>
@@ -107,9 +121,6 @@ async function handleSubmit() {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Sin este padding, en una pantalla mas estrecha que 380px (el
-     max-width de la modal) el "width: 100%" de .modal tocaria los bordes
-     del todo, pegado al cristal - se ve peor y es mas incomodo de tocar. */
   padding: var(--space-4);
   z-index: 100;
 }
