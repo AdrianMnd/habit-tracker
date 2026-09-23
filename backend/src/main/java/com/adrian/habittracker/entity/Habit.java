@@ -46,6 +46,11 @@ public class Habit {
     @Column(length = 10)
     private Priority priority = Priority.MEDIA;
 
+    // Sin "nullable = false": un habito puede no tener categoria asignada.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

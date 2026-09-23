@@ -13,6 +13,9 @@ public record HabitRequest(
         String description,
 
         // Opcional: si no se manda, el servicio usa Priority.MEDIA por defecto.
-        Priority priority
+        Priority priority,
+
+        // Opcional: null significa "sin categoria".
+        Long categoryId
 ) {
 }

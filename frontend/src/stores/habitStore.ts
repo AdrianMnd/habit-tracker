@@ -12,11 +12,11 @@ export const useHabitStore = defineStore('habits', () => {
   // al recargar la pagina; el estado real vive en el backend via /logs).
   const completedToday = ref(new Set<number>())
 
-  async function fetchHabits() {
+  async function fetchHabits(categoryId?: number) {
     loading.value = true
     error.value = null
     try {
-      habits.value = await habitApi.getAll()
+      habits.value = await habitApi.getAll(categoryId)
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Error cargando habitos'
     } finally {
@@ -28,6 +28,15 @@ export const useHabitStore = defineStore('habits', () => {
     const created = await habitApi.create(data)
     habits.value.push(created)
     return created
+  }
+
+  async function updateHabit(id: number, data: HabitRequest) {
+    const updated = await habitApi.update(id, data)
+    const index = habits.value.findIndex((h) => h.id === id)
+    if (index !== -1) {
+      habits.value[index] = updated
+    }
+    return updated
   }
 
   async function removeHabit(id: number) {
@@ -52,5 +61,5 @@ export const useHabitStore = defineStore('habits', () => {
     }
   }
 
-  return { habits, loading, error, completedToday, fetchHabits, addHabit, removeHabit, toggleToday }
+  return { habits, loading, error, completedToday, fetchHabits, addHabit, updateHabit, removeHabit, toggleToday }
 })

@@ -1,3 +1,5 @@
+import type { Category } from '@/types/category'
+
 export type HabitPriority = 'BAJA' | 'MEDIA' | 'ALTA'
 
 export interface Habit {
@@ -5,6 +7,7 @@ export interface Habit {
   name: string
   description: string | null
   priority: HabitPriority
+  category: Category | null
   createdAt: string
 }
 
@@ -12,11 +15,18 @@ export interface HabitRequest {
   name: string
   description?: string
   priority?: HabitPriority
+  categoryId?: number
 }
 
 export interface HabitLogRequest {
   logDate: string // formato YYYY-MM-DD
   completed: boolean
+}
+
+export interface HabitsSummary {
+  activeHabits: number
+  averageStreak: number
+  averageWeeklyCompletionRate: number
 }
 
 export interface HabitWeekEntry {

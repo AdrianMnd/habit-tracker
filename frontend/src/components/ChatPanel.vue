@@ -23,9 +23,9 @@ async function handleAddSuggestion(suggestion: HabitSuggestion) {
 </script>
 
 <template>
-  <section class="margin-note">
+  <section class="chat-panel panel">
     <h3>Consulta a la IA</h3>
-    <p class="margin-note__hint">
+    <p class="chat-panel__hint">
       Cuéntame un objetivo ("dormir mejor", "ser más productivo") o pregúntame
       sobre tus hábitos actuales.
     </p>
@@ -69,19 +69,24 @@ async function handleAddSuggestion(suggestion: HabitSuggestion) {
 </template>
 
 <style scoped>
-.margin-note {
-  border-left: 2px solid var(--color-ember);
-  padding-left: var(--space-4);
+.chat-panel {
+  /* El fondo, borde y radio ya vienen de la clase global "panel" (ver
+     main.css) - aqui solo anadimos el layout especifico de este
+     componente. */
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  /* Ocupa el 100% de lo que le da el <aside> ya estirado por el grid
+     (ver HomeView.vue) - sin esto, un contenedor flex sigue midiendo
+     solo lo que necesita su contenido, aunque el padre le de mas sitio. */
+  height: 100%;
 }
 
-.margin-note h3 {
+.chat-panel h3 {
   font-size: 1rem;
 }
 
-.margin-note__hint {
+.chat-panel__hint {
   font-size: 0.85rem;
   color: var(--color-ink-soft);
   margin: 0;
@@ -91,7 +96,15 @@ async function handleAddSuggestion(suggestion: HabitSuggestion) {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  max-height: 360px;
+  /* flex: 1 hace que este elemento absorba todo el espacio vertical
+     sobrante dentro de .margin-note (tras restar el titulo, la pista y
+     el formulario). min-height: 0 es el "truco" clasico de flexbox: sin
+     el, un hijo flex nunca se encoge por debajo del tamano de su propio
+     contenido, así que el overflow-y de abajo nunca llegaria a activarse
+     - el navegador preferiria desbordar la pagina entera antes que hacer
+     scroll aqui dentro. */
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -123,7 +136,12 @@ async function handleAddSuggestion(suggestion: HabitSuggestion) {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
-  background: var(--color-paper-raised);
+  /* El panel que contiene esto ya usa --color-paper-raised como fondo
+     (ver .chat-panel); si esta tarjeta usara el mismo tono, se fundiria
+     con el panel. Usamos --color-paper (mas oscuro, el tono del
+     "escritorio") para que se lea como una superficie hundida dentro
+     del panel, no una mas del mismo nivel. */
+  background: var(--color-paper);
   border: 1px solid var(--color-stone);
   border-radius: 6px;
   padding: var(--space-2) var(--space-3);
@@ -174,7 +192,7 @@ async function handleAddSuggestion(suggestion: HabitSuggestion) {
 .chat-form input {
   flex: 1;
   border: 1px solid var(--color-stone);
-  background: var(--color-paper-raised);
+  background: var(--color-paper);
   border-radius: 6px;
   padding: var(--space-2) var(--space-3);
   color: var(--color-ink);

@@ -22,8 +22,9 @@ public class HabitController {
     private final HabitService habitService;
 
     @GetMapping
-    public List<HabitResponse> findAll(@AuthenticationPrincipal UserPrincipal currentUser) {
-        return habitService.findAll(currentUser.getId());
+    public List<HabitResponse> findAll(@RequestParam(required = false) Long categoryId,
+                                        @AuthenticationPrincipal UserPrincipal currentUser) {
+        return habitService.findAll(currentUser.getId(), categoryId);
     }
 
     @GetMapping("/{id}")
@@ -67,6 +68,11 @@ public class HabitController {
      * Spring resuelve "/week" como ruta literal antes que "/{id}" como
      * variable, asi que no hay ambiguedad con findById.
      */
+    @GetMapping("/summary")
+    public HabitsSummaryResponse summary(@AuthenticationPrincipal UserPrincipal currentUser) {
+        return habitService.getSummary(currentUser.getId());
+    }
+
     @GetMapping("/week")
     public List<HabitWeekEntry> weekView(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,

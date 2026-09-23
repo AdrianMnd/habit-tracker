@@ -1,8 +1,9 @@
 import { apiRequest } from '@/services/http'
-import type { Habit, HabitRequest, HabitLogRequest, HabitWeekEntry, Streak } from '@/types/habit'
+import type { Habit, HabitRequest, HabitLogRequest, HabitsSummary, HabitWeekEntry, Streak } from '@/types/habit'
 
 export const habitApi = {
-  getAll: () => apiRequest<Habit[]>('/habits'),
+  getAll: (categoryId?: number) =>
+    apiRequest<Habit[]>(categoryId ? `/habits?categoryId=${categoryId}` : '/habits'),
 
   getById: (id: number) => apiRequest<Habit>(`/habits/${id}`),
 
@@ -19,5 +20,7 @@ export const habitApi = {
 
   getStreak: (id: number) => apiRequest<Streak>(`/habits/${id}/streak`),
 
-  getWeekView: (start: string) => apiRequest<HabitWeekEntry[]>(`/habits/week?start=${start}`)
+  getWeekView: (start: string) => apiRequest<HabitWeekEntry[]>(`/habits/week?start=${start}`),
+
+  getSummary: () => apiRequest<HabitsSummary>('/habits/summary')
 }

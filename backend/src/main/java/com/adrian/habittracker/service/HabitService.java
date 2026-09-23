@@ -1,11 +1,13 @@
 package com.adrian.habittracker.service;
 
 import com.adrian.habittracker.dto.*;
+import com.adrian.habittracker.entity.Category;
 import com.adrian.habittracker.entity.Habit;
 import com.adrian.habittracker.entity.HabitLog;
 import com.adrian.habittracker.entity.Priority;
 import com.adrian.habittracker.entity.User;
 import com.adrian.habittracker.exception.ResourceNotFoundException;
+import com.adrian.habittracker.repository.CategoryRepository;
 import com.adrian.habittracker.repository.HabitLogRepository;
 import com.adrian.habittracker.repository.HabitRepository;
 import com.adrian.habittracker.repository.UserRepository;
@@ -26,11 +28,17 @@ public class HabitService {
     private final HabitRepository habitRepository;
     private final HabitLogRepository habitLogRepository;
     private final UserRepository userRepository;
+    private final CategoryRepository categoryRepository;
 
     public List<HabitResponse> findAll(Long userId) {
-        return habitRepository.findByUserId(userId).stream()
-                .map(this::toResponse)
-                .toList();
+        return findAll(userId, null);
+    }
+
+    public List<HabitResponse> findAll(Long userId, Long categoryId) {
+        List<Habit> habits = categoryId != null
+                ? habitRepository.findByUserIdAndCategoryId(userId, categoryId)
+                : habitRepository.findByUserId(userId);
+        return habits.stream().map(this::toResponse).toList();
     }
 
     public HabitResponse findById(Long id, Long userId) {
@@ -49,6 +57,7 @@ public class HabitService {
         habit.setName(request.name());
         habit.setDescription(request.description());
         habit.setPriority(request.priority() != null ? request.priority() : Priority.MEDIA);
+        habit.setCategory(resolveCategory(request.categoryId(), userId));
         return toResponse(habitRepository.save(habit));
     }
 
@@ -58,6 +67,7 @@ public class HabitService {
         habit.setName(request.name());
         habit.setDescription(request.description());
         habit.setPriority(request.priority() != null ? request.priority() : Priority.MEDIA);
+        habit.setCategory(resolveCategory(request.categoryId(), userId));
         return toResponse(habitRepository.save(habit));
     }
 
@@ -112,6 +122,34 @@ public class HabitService {
         return new HabitWeekEntry(habit.getId(), habit.getName(), days);
     }
 
+    /**
+     * Resumen agregado para el dashboard: racha media y % de cumplimiento
+     * semanal medio a traves de TODOS los habitos del usuario, en una sola
+     * llamada (reutiliza los mismos helpers privados que calculateStreak,
+     * asi que la logica de calculo vive en un solo sitio).
+     */
+    public HabitsSummaryResponse getSummary(Long userId) {
+        List<Habit> habits = habitRepository.findByUserId(userId);
+        if (habits.isEmpty()) {
+            return new HabitsSummaryResponse(0, 0, 0);
+        }
+
+        double totalStreak = 0;
+        double totalWeeklyRate = 0;
+
+        for (Habit habit : habits) {
+            List<HabitLog> logs = habitLogRepository.findByHabitIdOrderByLogDateDesc(habit.getId());
+            Map<LocalDate, Boolean> completionByDate = logs.stream()
+                    .collect(Collectors.toMap(HabitLog::getLogDate, HabitLog::isCompleted, (a, b) -> a));
+
+            totalStreak += computeCurrentStreak(completionByDate);
+            totalWeeklyRate += computeWeeklyCompletionRate(completionByDate);
+        }
+
+        int count = habits.size();
+        return new HabitsSummaryResponse(count, totalStreak / count, totalWeeklyRate / count);
+    }
+
     public StreakResponse calculateStreak(Long habitId, Long userId) {
         getOwnedHabitOrThrow(habitId, userId); // valida propiedad antes de calcular
 
@@ -161,10 +199,28 @@ public class HabitService {
                 .orElseThrow(() -> new ResourceNotFoundException("Habito no encontrado: " + id));
     }
 
+    /**
+     * null es un valor valido (habito sin categoria); si viene un id que
+     * no existe o no es tuyo, falla alto y claro en vez de guardarlo con
+     * una referencia rota en silencio.
+     */
+    private Category resolveCategory(Long categoryId, Long userId) {
+        if (categoryId == null) {
+            return null;
+        }
+        return categoryRepository.findByIdAndUserId(categoryId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria no encontrada: " + categoryId));
+    }
+
     private HabitResponse toResponse(Habit habit) {
         // Filas creadas antes de anadir esta columna podrian tener
         // priority=null en BD (la columna es nullable a proposito).
         Priority priority = habit.getPriority() != null ? habit.getPriority() : Priority.MEDIA;
-        return new HabitResponse(habit.getId(), habit.getName(), habit.getDescription(), priority, habit.getCreatedAt());
+
+        CategoryResponse category = habit.getCategory() != null
+                ? new CategoryResponse(habit.getCategory().getId(), habit.getCategory().getName())
+                : null;
+
+        return new HabitResponse(habit.getId(), habit.getName(), habit.getDescription(), priority, category, habit.getCreatedAt());
     }
 }

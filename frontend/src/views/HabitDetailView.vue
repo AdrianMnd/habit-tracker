@@ -18,7 +18,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="habit" class="habit-detail">
+  <div v-if="habit" class="habit-detail panel">
     <RouterLink to="/" class="back-link">← Mis hábitos</RouterLink>
 
     <h2>{{ habit.name }}</h2>

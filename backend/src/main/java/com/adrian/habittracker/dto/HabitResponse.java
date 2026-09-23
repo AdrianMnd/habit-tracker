@@ -9,6 +9,7 @@ public record HabitResponse(
         String name,
         String description,
         Priority priority,
+        CategoryResponse category,
         Instant createdAt
 ) {
 }

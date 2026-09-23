@@ -83,6 +83,19 @@ input {
   }
 }
 
+/* Superficie elevada reutilizable: el fondo de la app (--color-paper) es
+   "el escritorio"; cualquier zona de contenido real (la lista de habitos,
+   el chat, el calendario, las tarjetas de estadisticas) vive dentro de un
+   .panel, un tono mas claro (--color-paper-raised) con borde propio - asi
+   se distinguen como objetos independientes en vez de texto flotando
+   directamente sobre el fondo de toda la pagina. */
+.panel {
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-stone);
+  border-radius: 10px;
+  padding: var(--space-6);
+}
+
 /* Scrollbars a juego con el tema, en vez de la barra clara por defecto del navegador */
 * {
   scrollbar-width: thin;
