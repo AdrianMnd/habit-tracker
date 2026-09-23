@@ -1,33 +1,34 @@
 # Habit Tracker
 
-Proyecto pequeño de práctica para afianzar **Vue 3** en frontend y **Java + Spring Boot** en backend, con una integración ligera de IA (Gemini) para sugerir y comentar hábitos.
+Proyecto de práctica para afianzar **Vue 3** en frontend y **Java + Spring Boot** en backend, con integración de IA (Gemini, con streaming) para sugerir y comentar hábitos. Monorepo, desplegado en producción: backend con Docker en Render, frontend en Vercel.
 
 ## Objetivo del proyecto
 
 Aprender/consolidar:
-- **Backend**: Spring Boot (Web, Data JPA, Validation), Java moderno (records, Streams, LocalDate).
-- **Frontend**: Vue 3 con Composition API (`<script setup>`), Pinia, Vue Router.
-- **IA**: integración puntual con Gemini para un chat de recomendación de hábitos (pendiente de implementar).
+- **Backend**: Spring Boot (Web, Data JPA, Validation, Security, Actuator), Java moderno (records, Streams, LocalDate), programación reactiva (WebClient, Flux, Server-Sent Events).
+- **Frontend**: Vue 3 con Composition API (`<script setup>`), Pinia, Vue Router, consumo de streams (`fetch` + `ReadableStream`).
+- **IA**: integración con Gemini, streaming en tiempo real, prompt engineering para combinar texto libre con datos estructurados.
+- **DevOps**: monorepo con git, Docker (build multi-stage), despliegue en Render + Vercel.
+- **Seguridad**: autenticación stateless con JWT, multiusuario.
 
 ## Estado actual
 
-- [x] Estructura de carpetas backend + frontend
-- [x] Entidades `Habit` y `HabitLog`
-- [x] CRUD de hábitos (API REST)
-- [x] Registro de cumplimiento diario (`POST /api/habits/{id}/logs`)
-- [x] Cálculo de racha y % de cumplimiento semanal (`GET /api/habits/{id}/streak`)
+- [x] CRUD de hábitos + registro de cumplimiento diario + cálculo de racha
 - [x] Tests unitarios del cálculo de racha (JUnit + Mockito)
-- [x] Vistas Vue: lista de hábitos, detalle con racha
-- [x] Store de Pinia + cliente API
-- [x] Chat con Gemini (`AiChatController` + `AiChatService` en el backend, `ChatPanel.vue` + `useHabitChat` en el frontend)
-- [ ] Autenticación (deliberadamente fuera del alcance de la v1)
-- [ ] Despliegue (Render backend + Vercel frontend + Neon Postgres)
+- [x] Chat con Gemini, con streaming (SSE) y sugerencias de hábitos parseadas en vivo
+- [x] Tema visual oscuro con sistema de tokens CSS
+- [x] Autenticación JWT + multiusuario (Spring Security)
+- [x] Despliegue: backend con Docker en Render, frontend en Vercel
+- [ ] Calendario semanal de hábitos
+- [ ] Logo/favicon y rediseño visual
+- [ ] Tests e2e
+- [ ] CI (GitHub Actions)
 
 ## Estructura
 
 ```
 habit-tracker/
-├── backend/    Spring Boot (Java 21, Maven)
+├── backend/    Spring Boot (Java 21, Maven, Docker)
 └── frontend/   Vue 3 + TypeScript (Vite)
 ```
 
@@ -36,13 +37,10 @@ habit-tracker/
 ### Backend
 ```bash
 cd backend
-# Necesitas Postgres local o apuntar DATABASE_URL a Neon
-./mvnw spring-boot:run
+cp .env.example .env   # rellena tus credenciales reales
+mvn spring-boot:run
 ```
-Variables de entorno relevantes (ver `application.properties`):
-- `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`
-- `CORS_ALLOWED_ORIGINS`
-- `GEMINI_API_KEY` (se usará al implementar el chat)
+Variables de entorno (ver `.env.example`): `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `CORS_ALLOWED_ORIGINS`, `GEMINI_API_KEY`, `JWT_SECRET`. Se cargan automáticamente desde `.env` vía `springboot3-dotenv` (no hace falta exportarlas a mano).
 
 ### Frontend
 ```bash
@@ -52,32 +50,40 @@ cp .env.example .env
 npm run dev
 ```
 
+## Autenticación
+
+La API es multiusuario: cada hábito pertenece a quien lo creó, y ningún endpoint de hábitos/chat funciona sin un token JWT válido (excepto `/api/auth/**` y `/actuator/health`, que son públicos). El token se obtiene en `/api/auth/login` o `/api/auth/register` y se envía en cada petición como `Authorization: Bearer <token>`. El frontend gestiona esto automáticamente una vez has iniciado sesión.
+
 ## Endpoints actuales
 
-| Método | Ruta                       | Descripción                          |
-|--------|-----------------------------|---------------------------------------|
-| GET    | `/api/habits`               | Listar hábitos                        |
-| GET    | `/api/habits/{id}`          | Detalle de un hábito                  |
-| POST   | `/api/habits`                | Crear hábito                          |
-| PUT    | `/api/habits/{id}`          | Editar hábito                         |
-| DELETE | `/api/habits/{id}`          | Eliminar hábito                       |
-| POST   | `/api/habits/{id}/logs`     | Marcar/desmarcar cumplimiento de un día |
-| GET    | `/api/habits/{id}/streak`   | Racha actual + % cumplimiento semanal |
-| POST   | `/api/ai/chat`               | Chat de recomendación de hábitos con Gemini |
+| Método | Ruta                       | Descripción                          | Requiere token |
+|--------|-----------------------------|---------------------------------------|:---:|
+| POST   | `/api/auth/register`        | Crear cuenta                          | No |
+| POST   | `/api/auth/login`           | Iniciar sesión                        | No |
+| GET    | `/api/habits`               | Listar hábitos del usuario            | Sí |
+| GET    | `/api/habits/{id}`          | Detalle de un hábito                  | Sí |
+| POST   | `/api/habits`                | Crear hábito                          | Sí |
+| PUT    | `/api/habits/{id}`          | Editar hábito                         | Sí |
+| DELETE | `/api/habits/{id}`          | Eliminar hábito                       | Sí |
+| POST   | `/api/habits/{id}/logs`     | Marcar/desmarcar cumplimiento de un día | Sí |
+| GET    | `/api/habits/{id}/streak`   | Racha actual + % cumplimiento semanal | Sí |
+| POST   | `/api/ai/chat/stream`       | Chat de recomendación (streaming SSE) | Sí |
+| GET    | `/actuator/health`          | Health check (usado por Render)       | No |
 
-### Configurar la clave de Gemini
+### Claves necesarias
 
-1. Crea una clave gratuita en [Google AI Studio](https://aistudio.google.com/app/apikey).
-2. Expórtala como variable de entorno antes de levantar el backend:
-   ```powershell
-   $env:GEMINI_API_KEY="tu_clave_aqui"
-   ```
-3. Si no la configuras, el endpoint `/api/ai/chat` responderá con un error 502 indicando que falta la clave — el resto de la app (CRUD, rachas) sigue funcionando igual.
+- **Gemini**: clave gratuita en [Google AI Studio](https://aistudio.google.com/app/apikey) → `GEMINI_API_KEY`.
+- **JWT**: cualquier cadena aleatoria de al menos 32 caracteres → `JWT_SECRET`. Genera una con:
+  ```powershell
+  [System.Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+  ```
+
+## Despliegue
+
+- **Backend**: Render, servicio Docker (`backend/Dockerfile`, build multi-stage). Health check en `/actuator/health`.
+- **Frontend**: Vercel, `frontend/` como root directory, framework Vite.
+- Variables de entorno de producción se configuran en el panel de cada plataforma (no en `.env`, que es solo para local).
 
 ## Próximos pasos
 
-1. Validar el backend (levantar, probar endpoints con Postman/curl o `.http`).
-2. Instalar dependencias del frontend y verificar la conexión con la API.
-3. Diseñar el prompt del chat de Gemini y completar `AiChatController` / `ChatPanel.vue`.
-4. Desplegar (Render + Vercel + Neon).
-5. Documentación de cierre (README técnico ampliado, PDF de estudio, actualización de CV) según cierre habitual de proyectos.
+Ver los pendientes marcados como `[ ]` arriba: calendario semanal, logo/rediseño visual, tests e2e, CI.

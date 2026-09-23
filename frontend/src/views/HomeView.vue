@@ -3,30 +3,23 @@ import { onMounted, ref } from 'vue'
 import { useHabitStore } from '@/stores/habitStore'
 import HabitCard from '@/components/HabitCard.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
+import AddHabitModal from '@/components/AddHabitModal.vue'
 
 const store = useHabitStore()
-const newHabitName = ref('')
+const showModal = ref(false)
 
 onMounted(() => {
   store.fetchHabits()
 })
-
-async function handleCreate() {
-  if (!newHabitName.value.trim()) return
-  await store.addHabit({ name: newHabitName.value.trim() })
-  newHabitName.value = ''
-}
 </script>
 
 <template>
   <div class="home-view">
     <section class="ledger">
-      <h2>Mis hábitos</h2>
-
-      <form class="new-entry-form" @submit.prevent="handleCreate">
-        <input v-model="newHabitName" placeholder="Nuevo hábito (p. ej. Leer 20 min)" />
-        <button type="submit">Añadir</button>
-      </form>
+      <div class="ledger__header">
+        <h2>Mis hábitos</h2>
+        <button type="button" class="add-button" @click="showModal = true">+ Añadir hábito</button>
+      </div>
 
       <p v-if="store.loading" class="status-text">Cargando...</p>
 
@@ -35,7 +28,7 @@ async function handleCreate() {
 
         <div v-if="store.habits.length === 0 && !store.error" class="empty-state">
           <p>Aún no hay entradas en tu cuaderno.</p>
-          <p class="empty-state__hint">Añade tu primer hábito arriba para empezar a llevar el registro.</p>
+          <p class="empty-state__hint">Añade tu primer hábito para empezar a llevar el registro.</p>
         </div>
 
         <div v-else-if="store.habits.length > 0">
@@ -52,6 +45,8 @@ async function handleCreate() {
     <aside>
       <ChatPanel />
     </aside>
+
+    <AddHabitModal v-if="showModal" @close="showModal = false" />
   </div>
 </template>
 
@@ -69,43 +64,30 @@ async function handleCreate() {
   }
 }
 
-.ledger h2 {
-  font-size: 1.3rem;
-  margin-bottom: var(--space-6);
-}
-
-.new-entry-form {
+.ledger__header {
   display: flex;
-  gap: var(--space-2);
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: var(--space-6);
 }
 
-.new-entry-form input {
-  flex: 1;
-  border: 1px solid var(--color-stone);
-  background: var(--color-paper-raised);
-  border-radius: 6px;
-  padding: var(--space-2) var(--space-3);
-  font-size: 0.95rem;
-  color: var(--color-ink);
+.ledger__header h2 {
+  font-size: 1.3rem;
 }
 
-.new-entry-form input::placeholder {
-  color: var(--color-ink-soft);
-}
-
-.new-entry-form button {
-  border: none;
-  background: var(--color-ink);
-  color: var(--color-paper);
+.add-button {
+  border: 1px solid var(--color-moss);
+  background: transparent;
+  color: var(--color-moss);
   border-radius: 6px;
   padding: var(--space-2) var(--space-4);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
 }
 
-.new-entry-form button:hover {
+.add-button:hover {
   background: var(--color-moss);
+  color: var(--color-paper-raised);
 }
 
 .status-text {

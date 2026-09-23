@@ -1,5 +1,6 @@
 package com.adrian.habittracker.dto;
 
+import com.adrian.habittracker.entity.Priority;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -9,6 +10,9 @@ public record HabitRequest(
         String name,
 
         @Size(max = 255)
-        String description
+        String description,
+
+        // Opcional: si no se manda, el servicio usa Priority.MEDIA por defecto.
+        Priority priority
 ) {
 }

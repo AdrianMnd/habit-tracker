@@ -1,3 +1,4 @@
+import { tokenStorage } from '@/services/tokenStorage'
 import type { AiChatRequest } from '@/types/habit'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
@@ -11,11 +12,23 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
  * usuario en un POST con JSON.
  */
 async function* streamChat(data: AiChatRequest): AsyncGenerator<string> {
+  const token = tokenStorage.getToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const response = await fetch(`${BASE_URL}/ai/chat/stream`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data)
   })
+
+  if (response.status === 401) {
+    tokenStorage.clear()
+    window.location.href = '/login'
+    throw new Error('Sesion caducada, vuelve a iniciar sesion')
+  }
 
   if (!response.ok || !response.body) {
     const body = await response.json().catch(() => null)
@@ -46,7 +59,12 @@ async function* streamChat(data: AiChatRequest): AsyncGenerator<string> {
       // la primera, o perdemos texto por el camino.
       const dataLines = event.split('\n').filter((l) => l.startsWith('data:'))
       if (dataLines.length > 0) {
-        yield dataLines.map((l) => l.slice('data:'.length).trimStart()).join('\n')
+        // El backend codifica cada fragmento como cadena JSON antes de
+        // enviarlo (ver AiChatService.toJsonString). JSON.parse() recupera
+        // el texto exacto sin depender de ninguna convencion de espacios
+        // de SSE - evita perder o duplicar espacios entre palabras.
+        const raw = dataLines.map((l) => l.slice('data:'.length)).join('\n').trim()
+        yield JSON.parse(raw) as string
       }
     }
   }

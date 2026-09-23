@@ -34,7 +34,14 @@ async function handleRemove() {
 <template>
   <article class="entry">
     <div class="entry__info">
-      <RouterLink :to="`/habits/${habit.id}`" class="entry__name">{{ habit.name }}</RouterLink>
+      <div class="entry__name-row">
+        <span
+          class="priority-dot"
+          :class="`priority-dot--${(habit.priority ?? 'MEDIA').toLowerCase()}`"
+          :title="`Prioridad ${(habit.priority ?? 'MEDIA').toLowerCase()}`"
+        />
+        <RouterLink :to="`/habits/${habit.id}`" class="entry__name">{{ habit.name }}</RouterLink>
+      </div>
       <p v-if="habit.description" class="entry__description">{{ habit.description }}</p>
     </div>
 
@@ -61,6 +68,31 @@ async function handleRemove() {
   gap: var(--space-4);
   padding: var(--space-4) 0;
   border-bottom: 1px solid var(--color-stone);
+}
+
+.entry__name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.priority-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.priority-dot--alta {
+  background: var(--color-danger);
+}
+
+.priority-dot--media {
+  background: var(--color-ember);
+}
+
+.priority-dot--baja {
+  background: var(--color-ink-soft);
 }
 
 .entry__name {

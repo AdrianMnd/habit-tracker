@@ -1,10 +1,12 @@
 package com.adrian.habittracker.controller;
 
 import com.adrian.habittracker.dto.AiChatRequest;
+import com.adrian.habittracker.security.UserPrincipal;
 import com.adrian.habittracker.service.AiChatService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +27,8 @@ public class AiChatController {
      * un tipo de retorno Flux<String>.
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> streamChat(@Valid @RequestBody AiChatRequest request) {
-        return aiChatService.streamChat(request.message());
+    public Flux<String> streamChat(@Valid @RequestBody AiChatRequest request,
+                                    @AuthenticationPrincipal UserPrincipal currentUser) {
+        return aiChatService.streamChat(currentUser.getId(), request.message());
     }
 }

@@ -1,18 +1,28 @@
+export type HabitPriority = 'BAJA' | 'MEDIA' | 'ALTA'
+
 export interface Habit {
   id: number
   name: string
   description: string | null
+  priority: HabitPriority
   createdAt: string
 }
 
 export interface HabitRequest {
   name: string
   description?: string
+  priority?: HabitPriority
 }
 
 export interface HabitLogRequest {
   logDate: string // formato YYYY-MM-DD
   completed: boolean
+}
+
+export interface HabitWeekEntry {
+  habitId: number
+  habitName: string
+  days: Record<string, boolean> // fecha ISO (YYYY-MM-DD) -> cumplido
 }
 
 export interface Streak {

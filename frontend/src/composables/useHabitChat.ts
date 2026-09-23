@@ -70,7 +70,16 @@ export function useHabitChat() {
         refreshVisibleText()
       }
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'No se pudo contactar con la IA'
+      // Si ya habiamos mostrado texto o sugerencias, el stream fallo al
+      // cerrarse (posible corte anomalo de conexion en algun proxy
+      // intermedio), no al generar contenido - no tiene sentido asustar
+      // al usuario con un error cuando la respuesta ya se ve completa.
+      const alreadyHasContent = visibleText.length > 0 || suggestions.length > 0
+      if (!alreadyHasContent) {
+        error.value = e instanceof Error ? e.message : 'No se pudo contactar con la IA'
+      } else {
+        console.warn('El stream de IA termino con un error tras entregar contenido:', e)
+      }
     } finally {
       sending.value = false
     }

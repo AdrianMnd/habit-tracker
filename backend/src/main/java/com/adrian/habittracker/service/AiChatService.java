@@ -82,13 +82,13 @@ public class AiChatService {
      * Devuelve un flujo de fragmentos de texto segun los va generando Gemini.
      * El controlador se limita a exponer este Flux como Server-Sent Events.
      */
-    public Flux<String> streamChat(String userMessage) {
+    public Flux<String> streamChat(Long userId, String userMessage) {
         if (apiKey == null || apiKey.isBlank()) {
             return Flux.error(new AiServiceException(
                     "La clave de la API de Gemini no esta configurada (GEMINI_API_KEY)"));
         }
 
-        String habitsContext = buildHabitsContext();
+        String habitsContext = buildHabitsContext(userId);
         Map<String, Object> requestBody = buildRequestBody(habitsContext, userMessage);
 
         return geminiWebClient.post()
@@ -103,13 +103,18 @@ public class AiChatService {
                 .mapNotNull(ServerSentEvent::data)
                 .map(this::extractDeltaText)
                 .filter(text -> !text.isEmpty())
+                // Codificamos cada fragmento como cadena JSON antes de
+                // reenviarlo. Asi el frontend hace JSON.parse() en vez de
+                // fiarse de convenciones de espacios del propio SSE, que
+                // resultaron ser ambiguas (ver AiChatService/aiChatApi.ts).
+                .map(this::toJsonString)
                 .timeout(Duration.ofSeconds(30))
                 .onErrorMap(e -> !(e instanceof AiServiceException),
                         e -> new AiServiceException("Fallo el streaming con Gemini", e));
     }
 
-    private String buildHabitsContext() {
-        List<HabitResponse> habits = habitService.findAll();
+    private String buildHabitsContext(Long userId) {
+        List<HabitResponse> habits = habitService.findAll(userId);
         if (habits.isEmpty()) {
             return "El usuario todavia no tiene ningun habito registrado.";
         }
@@ -142,6 +147,14 @@ public class AiChatService {
      * (p. ej. un evento de metadatos), devolvemos cadena vacia y el Flux lo
      * descarta con el filter().
      */
+    private String toJsonString(String text) {
+        try {
+            return objectMapper.writeValueAsString(text);
+        } catch (Exception e) {
+            throw new AiServiceException("No se pudo serializar un fragmento del stream", e);
+        }
+    }
+
     private String extractDeltaText(String eventDataJson) {
         try {
             JsonNode root = objectMapper.readTree(eventDataJson);
