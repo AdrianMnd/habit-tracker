@@ -37,6 +37,18 @@ public class HabitController {
         return habitService.findArchived(currentUser.getId());
     }
 
+    @GetMapping("/progress")
+    public List<WeeklyProgressPoint> weeklyProgress(
+            @RequestParam(defaultValue = "8") int weeks,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        return habitService.getWeeklyProgress(currentUser.getId(), weeks);
+    }
+
+    @GetMapping("/streaks")
+    public List<HabitStreakSummary> streaks(@AuthenticationPrincipal UserPrincipal currentUser) {
+        return habitService.getStreakSummaries(currentUser.getId());
+    }
+
     // PATCH, no PUT ni POST: modificamos UN campo concreto (archived) de
     // un recurso existente, no lo reemplazamos entero (eso seria PUT) ni
     // creamos uno nuevo (POST). Es la primera vez que usamos PATCH aqui -
