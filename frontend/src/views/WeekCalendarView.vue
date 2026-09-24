@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { habitApi } from '@/services/habitApi'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import type { HabitWeekEntry } from '@/types/habit'
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -93,7 +94,7 @@ watch(weekStart, fetchWeek)
       </div>
     </div>
 
-    <p v-if="loading" class="status-text">Cargando...</p>
+    <LoadingSpinner v-if="loading" label="Cargando calendario..." />
     <p v-else-if="error" class="status-text status-text--error">{{ error }}</p>
 
     <div v-else-if="entries.length === 0" class="empty-state">

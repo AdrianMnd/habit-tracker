@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { Chart } from 'chart.js/auto'
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import Chart from 'chart.js/auto'
 import { habitApi } from '@/services/habitApi'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import type { HabitStreakSummary, WeeklyProgressPoint } from '@/types/habit'
 
 const progressCanvas = ref<HTMLCanvasElement | null>(null)
@@ -23,11 +24,23 @@ onMounted(async () => {
       habitApi.getWeeklyProgress(8),
       habitApi.getStreaks()
     ])
+
+    // El <canvas> solo existe en el DOM cuando loading ya es false (esta
+    // detras de un v-else en la plantilla). Si dibujaramos ANTES de
+    // cambiar loading, progressCanvas.value seguiria siendo null. Y
+    // aunque cambiemos loading aqui, Vue no actualiza el DOM al instante
+    // - las actualizaciones se agrupan y se aplican en el siguiente
+    // "tick". nextTick() devuelve una promesa que se resuelve justo
+    // despues de que Vue haya terminado de pintar ese cambio, así que
+    // es la forma correcta de esperar a que el <canvas> exista de
+    // verdad antes de intentar dibujar en el.
+    loading.value = false
+    await nextTick()
+
     renderProgressChart(progress)
     renderStreaksChart(streaks)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Error cargando el progreso'
-  } finally {
     loading.value = false
   }
 })
@@ -107,7 +120,7 @@ function chartOptions() {
 
 <template>
   <div class="progress-view">
-    <p v-if="loading" class="status-text">Cargando...</p>
+    <LoadingSpinner v-if="loading" label="Cargando progreso..." />
     <p v-else-if="error" class="status-text status-text--error">{{ error }}</p>
 
     <template v-else>
@@ -135,6 +148,15 @@ function chartOptions() {
   flex-direction: column;
   gap: var(--space-6);
 }
+
+/* El limite anterior (max-width: 820px) dejaba un hueco enorme entre
+   los paneles y el chat en pantallas anchas - un grafico de Chart.js
+   es responsive por definicion (ver "responsive: true" en chartOptions
+   mas abajo), asi que no hay razon para no dejarle usar todo el ancho
+   de app-main, igual que ya hace .ledger en HomeView.vue. Solo le
+   ponemos un limite de altura al canvas (.chart-wrapper), nunca de
+   ancho: un grafico de linea o de barras muy ancho pero de altura fija
+   se sigue leyendo bien, mientras que uno muy alto se deforma. */
 
 .chart-panel h2 {
   font-size: 1.1rem;

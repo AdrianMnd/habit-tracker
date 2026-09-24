@@ -97,7 +97,7 @@ async function handleChangePassword() {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  max-width: 420px;
+  max-width: 820px;
 }
 
 .settings-section h2 {

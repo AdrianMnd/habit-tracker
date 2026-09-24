@@ -186,11 +186,18 @@ async function handleAddSuggestion(suggestion: HabitSuggestion) {
 
 .chat-form {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .chat-form input {
   flex: 1;
+  /* min-width: 0 - el mismo truco de flexbox que ya usamos en
+     .app-content y .chat-log: sin esto, un <input> dentro de un
+     contenedor flex nunca se encoge por debajo de su ancho "intrinseco"
+     (unos 170-200px en la mayoria de navegadores), asi que en una
+     .chat-panel estrecha era el input quien empujaba al boton hacia el
+     borde derecho en vez de encogerse el primero. */
+  min-width: 0;
   border: 1px solid var(--color-stone);
   background: var(--color-paper);
   border-radius: 6px;
@@ -200,11 +207,16 @@ async function handleAddSuggestion(suggestion: HabitSuggestion) {
 }
 
 .chat-form button {
+  /* flex-shrink: 0 - lo contrario del min-width: 0 de arriba: este si
+     queremos que mantenga siempre su tamano completo (texto + padding),
+     nunca que se comprima para dejarle sitio al input. */
+  flex-shrink: 0;
+  white-space: nowrap;
   border: none;
   background: var(--color-ink);
   color: var(--color-paper);
   border-radius: 6px;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-6);
   font-size: 0.85rem;
   font-weight: 500;
 }

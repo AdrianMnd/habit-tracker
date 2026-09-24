@@ -3,9 +3,9 @@ import { onMounted, ref, watch } from 'vue'
 import { useHabitStore } from '@/stores/habitStore'
 import { useCategoryStore } from '@/stores/categoryStore'
 import HabitCard from '@/components/HabitCard.vue'
-import ChatPanel from '@/components/ChatPanel.vue'
 import HabitFormModal from '@/components/HabitFormModal.vue'
 import StatsSummary from '@/components/StatsSummary.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import type { Habit } from '@/types/habit'
 
 const store = useHabitStore()
@@ -43,74 +43,47 @@ watch(categoryFilter, (value) => {
   <div>
     <StatsSummary />
 
-    <div class="home-view">
-      <section class="ledger panel">
-        <div class="ledger__header">
-          <h2>Mis hábitos</h2>
-          <div class="ledger__header-actions">
-            <select v-model="categoryFilter" class="category-filter">
-              <option value="">Todas las categorías</option>
-              <option v-for="category in categoryStore.categories" :key="category.id" :value="category.id">
-                {{ category.name }}
-              </option>
-            </select>
-            <button type="button" class="add-button" @click="openCreateModal">+ Añadir hábito</button>
-          </div>
+    <section class="ledger panel">
+      <div class="ledger__header">
+        <h2>Mis hábitos</h2>
+        <div class="ledger__header-actions">
+          <select v-model="categoryFilter" class="category-filter">
+            <option value="">Todas las categorías</option>
+            <option v-for="category in categoryStore.categories" :key="category.id" :value="category.id">
+              {{ category.name }}
+            </option>
+          </select>
+          <button type="button" class="add-button" @click="openCreateModal">+ Añadir hábito</button>
+        </div>
+      </div>
+
+      <LoadingSpinner v-if="store.loading" label="Cargando hábitos..." />
+
+      <template v-else>
+        <p v-if="store.error" class="status-text status-text--error">{{ store.error }}</p>
+
+        <div v-if="store.habits.length === 0 && !store.error" class="empty-state">
+          <p>Aún no hay entradas en tu cuaderno.</p>
+          <p class="empty-state__hint">Añade tu primer hábito para empezar a llevar el registro.</p>
         </div>
 
-        <p v-if="store.loading" class="status-text">Cargando...</p>
-
-        <template v-else>
-          <p v-if="store.error" class="status-text status-text--error">{{ store.error }}</p>
-
-          <div v-if="store.habits.length === 0 && !store.error" class="empty-state">
-            <p>Aún no hay entradas en tu cuaderno.</p>
-            <p class="empty-state__hint">Añade tu primer hábito para empezar a llevar el registro.</p>
-          </div>
-
-          <div v-else-if="store.habits.length > 0">
-            <HabitCard
-              v-for="habit in store.habits"
-              :key="habit.id"
-              :habit="habit"
-              :completed-today="store.completedToday.has(habit.id)"
-              @edit="openEditModal"
-            />
-          </div>
-        </template>
-      </section>
-
-      <aside>
-        <ChatPanel />
-      </aside>
-    </div>
+        <div v-else-if="store.habits.length > 0">
+          <HabitCard
+            v-for="habit in store.habits"
+            :key="habit.id"
+            :habit="habit"
+            :completed-today="store.completedToday.has(habit.id)"
+            @edit="openEditModal"
+          />
+        </div>
+      </template>
+    </section>
 
     <HabitFormModal v-if="showModal" :habit="editingHabit" @close="closeModal" />
   </div>
 </template>
 
 <style scoped>
-.home-view {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: var(--space-12);
-  /* Sin "align-items", el valor por defecto de CSS Grid es "stretch":
-     cada columna ocupa toda la altura de la fila, no solo la de su propio
-     contenido - es lo que permite que el chat pueda crecer tanto como la
-     lista de habitos en vez de quedarse en su tamano minimo. */
-  min-height: calc(100vh - 220px);
-}
-
-@media (max-width: 720px) {
-  .home-view {
-    grid-template-columns: 1fr;
-    /* En movil, apiladas una encima de otra, cada seccion debe medir
-       solo lo que necesite - forzar la altura de la ventana aqui dejaria
-       un hueco vacio enorme debajo si el chat esta vacio. */
-    min-height: auto;
-  }
-}
-
 .ledger__header {
   display: flex;
   justify-content: space-between;
@@ -131,7 +104,14 @@ watch(categoryFilter, (value) => {
   background: var(--color-paper);
   color: var(--color-ink-soft);
   border-radius: 6px;
-  padding: var(--space-2) var(--space-3);
+  /* Un <select> nativo (sin appearance: none + flecha propia en SVG)
+     dibuja su flecha dentro del padding-right, pero pegada a su borde
+     interior - con el mismo padding a los dos lados (--space-3, 12px)
+     la flecha quedaba practicamente tocando el borde de la caja. Le
+     damos mas aire solo a la derecha (--space-8, 32px) para que la
+     flecha tenga hueco donde respirar sin mover el texto de la
+     izquierda. */
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
   font-size: 0.85rem;
 }
 
