@@ -36,8 +36,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Map<String, Object>> handleBadCredentials(BadCredentialsException ex) {
+        // Antes iba fijo a "Email o contraseña incorrectos" (pensado solo
+        // para login) - ahora AuthService.changePassword() tambien lanza
+        // esta misma excepcion, con un mensaje distinto ("La contraseña
+        // actual no es correcta"). Usamos ex.getMessage() para que cada
+        // sitio que la lanza controle su propio texto.
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(body("Email o contraseña incorrectos", HttpStatus.UNAUTHORIZED));
+                .body(body(ex.getMessage(), HttpStatus.UNAUTHORIZED));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

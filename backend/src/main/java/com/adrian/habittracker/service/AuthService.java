@@ -1,10 +1,12 @@
 package com.adrian.habittracker.service;
 
 import com.adrian.habittracker.dto.auth.AuthResponse;
+import com.adrian.habittracker.dto.auth.ChangePasswordRequest;
 import com.adrian.habittracker.dto.auth.LoginRequest;
 import com.adrian.habittracker.dto.auth.RegisterRequest;
 import com.adrian.habittracker.entity.User;
 import com.adrian.habittracker.exception.EmailAlreadyInUseException;
+import com.adrian.habittracker.exception.ResourceNotFoundException;
 import com.adrian.habittracker.repository.UserRepository;
 import com.adrian.habittracker.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -54,5 +56,18 @@ public class AuthService {
 
         String token = jwtService.generateToken(request.email());
         return new AuthResponse(token, request.email());
+    }
+
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new BadCredentialsException("La contraseña actual no es correcta");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 }

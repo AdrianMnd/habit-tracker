@@ -24,6 +24,7 @@ function handleLogout() {
       <RouterLink to="/categories">Categorías</RouterLink>
       <RouterLink to="/archive">Archivo</RouterLink>
       <RouterLink to="/progress">Progreso</RouterLink>
+      <RouterLink to="/settings">Ajustes</RouterLink>
     </nav>
 
     <div class="sidebar__footer">
