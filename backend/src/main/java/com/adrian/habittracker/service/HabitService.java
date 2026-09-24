@@ -15,7 +15,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +45,28 @@ public class HabitService {
 
     public HabitResponse findById(Long id, Long userId) {
         return toResponse(getOwnedHabitOrThrow(id, userId));
+    }
+
+    public List<HabitResponse> findArchived(Long userId) {
+        return habitRepository.findArchivedByUserId(userId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    public void setArchived(Long id, Long userId, boolean archived) {
+        Habit habit = getOwnedHabitOrThrow(id, userId);
+        habit.setArchived(archived);
+        // No hace falta llamar a habitRepository.save(habit) aqui: dentro
+        // de un metodo @Transactional, una entidad que ya viene de una
+        // consulta (getOwnedHabitOrThrow) esta "gestionada" (managed) por
+        // Hibernate. Cualquier cambio sobre sus campos se detecta solo
+        // ("dirty checking") y se vuelca a la BD al confirmar la
+        // transaccion, sin necesidad de guardar explicitamente. Si ves
+        // save() en otros metodos de esta clase (create/update) es por
+        // estilo/claridad, no porque sea estrictamente necesario ahi
+        // tampoco - pero aqui lo dejo fuera a proposito para que veas
+        // que existe esta alternativa.
     }
 
     @Transactional
@@ -162,6 +186,70 @@ public class HabitService {
         double weeklyRate = computeWeeklyCompletionRate(completionByDate);
 
         return new StreakResponse(habitId, currentStreak, weeklyRate);
+    }
+
+    /**
+     * Tendencia de cumplimiento medio (a traves de todos los habitos
+     * activos) semana a semana, de mas antigua a mas reciente - pensada
+     * para dibujar directamente como grafico de lineas.
+     */
+    public List<WeeklyProgressPoint> getWeeklyProgress(Long userId, int weeksBack) {
+        List<Habit> habits = habitRepository.findByUserId(userId);
+        LocalDate currentWeekStart = LocalDate.now().with(DayOfWeek.MONDAY);
+
+        List<WeeklyProgressPoint> points = new ArrayList<>();
+        for (int i = weeksBack - 1; i >= 0; i--) {
+            LocalDate weekStart = currentWeekStart.minusWeeks(i);
+            points.add(new WeeklyProgressPoint(weekStart, averageCompletionRateForWeek(habits, weekStart)));
+        }
+        return points;
+    }
+
+    private double averageCompletionRateForWeek(List<Habit> habits, LocalDate weekStart) {
+        if (habits.isEmpty()) {
+            return 0;
+        }
+
+        LocalDate weekEnd = weekStart.plusDays(6);
+        double totalRate = 0;
+
+        for (Habit habit : habits) {
+            List<HabitLog> logs = habitLogRepository.findByHabitIdAndLogDateBetween(habit.getId(), weekStart, weekEnd);
+            Map<LocalDate, Boolean> completionByDate = logs.stream()
+                    .collect(Collectors.toMap(HabitLog::getLogDate, HabitLog::isCompleted, (a, b) -> a));
+            totalRate += computeCompletionRateForRange(completionByDate, weekStart, weekEnd);
+        }
+
+        return totalRate / habits.size();
+    }
+
+    private double computeCompletionRateForRange(Map<LocalDate, Boolean> completionByDate, LocalDate start, LocalDate end) {
+        long totalDays = 0;
+        long completedDays = 0;
+
+        for (LocalDate day = start; !day.isAfter(end); day = day.plusDays(1)) {
+            totalDays++;
+            if (Boolean.TRUE.equals(completionByDate.get(day))) {
+                completedDays++;
+            }
+        }
+        return completedDays / (double) totalDays;
+    }
+
+    /**
+     * Racha actual de cada habito activo, pensada para un grafico de
+     * barras comparativo.
+     */
+    public List<HabitStreakSummary> getStreakSummaries(Long userId) {
+        List<Habit> habits = habitRepository.findByUserId(userId);
+
+        return habits.stream().map(habit -> {
+            List<HabitLog> logs = habitLogRepository.findByHabitIdOrderByLogDateDesc(habit.getId());
+            Map<LocalDate, Boolean> completionByDate = logs.stream()
+                    .collect(Collectors.toMap(HabitLog::getLogDate, HabitLog::isCompleted, (a, b) -> a));
+            int streak = computeCurrentStreak(completionByDate);
+            return new HabitStreakSummary(habit.getId(), habit.getName(), streak);
+        }).toList();
     }
 
     private int computeCurrentStreak(Map<LocalDate, Boolean> completionByDate) {

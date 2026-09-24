@@ -8,6 +8,7 @@ export interface Habit {
   description: string | null
   priority: HabitPriority
   category: Category | null
+  archived: boolean
   createdAt: string
 }
 
@@ -21,6 +22,17 @@ export interface HabitRequest {
 export interface HabitLogRequest {
   logDate: string // formato YYYY-MM-DD
   completed: boolean
+}
+
+export interface WeeklyProgressPoint {
+  weekStart: string
+  averageCompletionRate: number
+}
+
+export interface HabitStreakSummary {
+  habitId: number
+  habitName: string
+  currentStreak: number
 }
 
 export interface HabitsSummary {

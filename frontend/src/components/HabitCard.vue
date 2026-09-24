@@ -28,8 +28,8 @@ async function handleToggle() {
   }
 }
 
-async function handleRemove() {
-  await habitStore.removeHabit(props.habit.id)
+async function handleArchive() {
+  await habitStore.archiveHabit(props.habit.id)
 }
 </script>
 
@@ -59,7 +59,7 @@ async function handleRemove() {
         {{ completedToday ? 'Hecho hoy ✓' : 'Marcar hoy' }}
       </button>
       <button type="button" class="text-button" @click="emit('edit', habit)">Editar</button>
-      <button type="button" class="text-button" @click="handleRemove">Eliminar</button>
+      <button type="button" class="text-button" @click="handleArchive">Archivar</button>
     </div>
   </article>
 </template>

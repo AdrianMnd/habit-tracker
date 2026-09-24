@@ -1,9 +1,11 @@
 package com.adrian.habittracker.config;
 
 import com.adrian.habittracker.security.JwtAuthFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -12,6 +14,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
@@ -31,6 +34,24 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    /**
+     * Sin esto, Spring Security no sabe como "reaccionar" ante una peticion
+     * sin autenticar valida en un setup JWT sin formulario de login ni auth
+     * basica - y por defecto acaba devolviendo 403 (Forbidden, "se quien
+     * eres pero no puedes") incluso cuando el problema real es que no sabe
+     * quien eres (401, Unauthorized). Un token ausente, mal formado o
+     * caducado son todos casos de "no autenticado": deben ser 401.
+     */
+    @Bean
+    public AuthenticationEntryPoint authenticationEntryPoint() {
+        return (request, response, authException) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.getWriter().write("""
+                    {"status":401,"error":"Unauthorized","message":"Token ausente, invalido o caducado"}""");
+        };
     }
 
     @Bean
@@ -58,6 +79,7 @@ public class SecurityConfig {
                         .securityContextRepository(new RequestAttributeSecurityContextRepository())
                         .requireExplicitSave(false)
                 )
+                .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
                         .anyRequest().authenticated()

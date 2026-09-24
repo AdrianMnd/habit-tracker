@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/authStore'
+import { useThemeStore } from '@/stores/themeStore'
 import AppSidebar from '@/components/AppSidebar.vue'
 
 const authStore = useAuthStore()
+// No se usa directamente en el template - basta con instanciarlo aqui
+// para que aplique el tema guardado nada mas arrancar la app, sin
+// esperar a que el usuario visite Ajustes.
+useThemeStore()
 </script>
 
 <template>

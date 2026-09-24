@@ -12,3 +12,8 @@ export interface AuthResponse {
   token: string
   email: string
 }
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}

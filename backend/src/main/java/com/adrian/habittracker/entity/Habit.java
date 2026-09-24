@@ -51,6 +51,15 @@ public class Habit {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    // A diferencia de "priority" (que dejamos nullable por prisa), aqui
+    // usamos columnDefinition para que la propia BD aplique el valor por
+    // defecto al anadir la columna: "ADD COLUMN archived boolean NOT NULL
+    // DEFAULT false" no falla sobre filas ya existentes (Postgres las
+    // rellena con el default automaticamente), a diferencia de un NOT
+    // NULL sin default (lo que nos obligo a un TRUNCATE con user_id).
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean archived = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

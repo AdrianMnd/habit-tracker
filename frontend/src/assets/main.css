@@ -14,7 +14,32 @@
   /* Type */
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
 
+/* Tema claro: la misma paleta "daybook" con la que empezamos el
+   proyecto, antes de pasarnos a oscuro - ahora convive con la oscura en
+   vez de sustituirla. El atributo data-theme lo pone/quita themeStore.ts
+   sobre <html>; sin ese atributo (o con "dark"), gana el bloque :root de
+   arriba por defecto. */
+:root[data-theme='light'] {
+  --color-ink: #2b3a30;
+  --color-ink-soft: #6f6a58;
+  /* Version mas suave que el primer intento (que quedaba demasiado
+     caqui/apagado): "paper" es un tan claro calido (el "escritorio"),
+     "paper-raised" un marfil luminoso claramente mas claro (el "papel"
+     encima) - contraste real entre superficies, pero mas luminoso y
+     agradable a la vista que la version anterior. */
+  --color-paper: #e8e0cc;
+  --color-paper-raised: #faf6ea;
+  --color-moss: #3f6b4a;
+  --color-moss-soft: rgba(63, 107, 74, 0.12);
+  --color-ember: #b8862c;
+  --color-ember-soft: rgba(184, 134, 44, 0.16);
+  --color-stone: #c9bd9c;
+  --color-danger: #a1432f;
+}
+
+:root {
   /* Spacing scale */
   --space-1: 0.25rem;
   --space-2: 0.5rem;

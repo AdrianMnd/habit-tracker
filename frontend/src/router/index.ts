@@ -31,6 +31,24 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/archive',
+      name: 'archive',
+      component: () => import('@/views/ArchiveView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/progress',
+      name: 'progress',
+      component: () => import('@/views/ProgressView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('@/views/SettingsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue')
