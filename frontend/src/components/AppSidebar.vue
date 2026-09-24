@@ -22,6 +22,7 @@ function handleLogout() {
       <RouterLink to="/">Mis hábitos</RouterLink>
       <RouterLink to="/calendar">Calendario</RouterLink>
       <RouterLink to="/categories">Categorías</RouterLink>
+      <RouterLink to="/archive">Archivo</RouterLink>
     </nav>
 
     <div class="sidebar__footer">

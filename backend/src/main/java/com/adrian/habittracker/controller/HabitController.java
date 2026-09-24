@@ -32,6 +32,27 @@ public class HabitController {
         return habitService.findById(id, currentUser.getId());
     }
 
+    @GetMapping("/archived")
+    public List<HabitResponse> archived(@AuthenticationPrincipal UserPrincipal currentUser) {
+        return habitService.findArchived(currentUser.getId());
+    }
+
+    // PATCH, no PUT ni POST: modificamos UN campo concreto (archived) de
+    // un recurso existente, no lo reemplazamos entero (eso seria PUT) ni
+    // creamos uno nuevo (POST). Es la primera vez que usamos PATCH aqui -
+    // el verbo HTTP pensado exactamente para actualizaciones parciales.
+    @PatchMapping("/{id}/archive")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void archive(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal currentUser) {
+        habitService.setArchived(id, currentUser.getId(), true);
+    }
+
+    @PatchMapping("/{id}/unarchive")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unarchive(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal currentUser) {
+        habitService.setArchived(id, currentUser.getId(), false);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public HabitResponse create(@Valid @RequestBody HabitRequest request,

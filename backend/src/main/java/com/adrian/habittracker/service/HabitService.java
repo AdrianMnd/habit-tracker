@@ -45,6 +45,28 @@ public class HabitService {
         return toResponse(getOwnedHabitOrThrow(id, userId));
     }
 
+    public List<HabitResponse> findArchived(Long userId) {
+        return habitRepository.findArchivedByUserId(userId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    public void setArchived(Long id, Long userId, boolean archived) {
+        Habit habit = getOwnedHabitOrThrow(id, userId);
+        habit.setArchived(archived);
+        // No hace falta llamar a habitRepository.save(habit) aqui: dentro
+        // de un metodo @Transactional, una entidad que ya viene de una
+        // consulta (getOwnedHabitOrThrow) esta "gestionada" (managed) por
+        // Hibernate. Cualquier cambio sobre sus campos se detecta solo
+        // ("dirty checking") y se vuelca a la BD al confirmar la
+        // transaccion, sin necesidad de guardar explicitamente. Si ves
+        // save() en otros metodos de esta clase (create/update) es por
+        // estilo/claridad, no porque sea estrictamente necesario ahi
+        // tampoco - pero aqui lo dejo fuera a proposito para que veas
+        // que existe esta alternativa.
+    }
+
     @Transactional
     public HabitResponse create(Long userId, HabitRequest request) {
         // getReferenceById no consulta la BD de inmediato: crea un proxy

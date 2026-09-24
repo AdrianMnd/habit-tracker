@@ -8,6 +8,7 @@ export interface Habit {
   description: string | null
   priority: HabitPriority
   category: Category | null
+  archived: boolean
   createdAt: string
 }
 

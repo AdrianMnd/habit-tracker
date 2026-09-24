@@ -19,11 +19,18 @@ public interface HabitRepository extends JpaRepository<Habit, Long> {
     // lanzaria LazyInitializationException. "LEFT" (no INNER) es
     // imprescindible: un habito sin categoria (category_id es NULL)
     // tiene que seguir apareciendo en el resultado.
-    @Query("SELECT h FROM Habit h LEFT JOIN FETCH h.category WHERE h.user.id = :userId")
+    // "findByUserId" significa implicitamente "activos" en todo el resto
+    // del codigo (lista principal, calendario, resumen) - un habito
+    // archivado no deberia contar para las estadisticas ni aparecer en el
+    // calendario semanal. Los archivados tienen su propia consulta.
+    @Query("SELECT h FROM Habit h LEFT JOIN FETCH h.category WHERE h.user.id = :userId AND h.archived = false")
     List<Habit> findByUserId(@Param("userId") Long userId);
 
+    @Query("SELECT h FROM Habit h LEFT JOIN FETCH h.category WHERE h.user.id = :userId AND h.archived = true")
+    List<Habit> findArchivedByUserId(@Param("userId") Long userId);
+
     @Query("SELECT h FROM Habit h LEFT JOIN FETCH h.category " +
-           "WHERE h.user.id = :userId AND h.category.id = :categoryId")
+           "WHERE h.user.id = :userId AND h.category.id = :categoryId AND h.archived = false")
     List<Habit> findByUserIdAndCategoryId(@Param("userId") Long userId, @Param("categoryId") Long categoryId);
 
     // Filtrar por userId aqui, no solo por id, es lo que impide que un

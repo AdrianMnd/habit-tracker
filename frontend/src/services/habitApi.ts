@@ -22,5 +22,11 @@ export const habitApi = {
 
   getWeekView: (start: string) => apiRequest<HabitWeekEntry[]>(`/habits/week?start=${start}`),
 
-  getSummary: () => apiRequest<HabitsSummary>('/habits/summary')
+  getSummary: () => apiRequest<HabitsSummary>('/habits/summary'),
+
+  getArchived: () => apiRequest<Habit[]>('/habits/archived'),
+
+  archive: (id: number) => apiRequest<void>(`/habits/${id}/archive`, { method: 'PATCH' }),
+
+  unarchive: (id: number) => apiRequest<void>(`/habits/${id}/unarchive`, { method: 'PATCH' })
 }

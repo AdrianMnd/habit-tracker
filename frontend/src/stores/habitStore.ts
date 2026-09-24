@@ -5,6 +5,7 @@ import type { Habit, HabitRequest } from '@/types/habit'
 
 export const useHabitStore = defineStore('habits', () => {
   const habits = ref<Habit[]>([])
+  const archivedHabits = ref<Habit[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -41,8 +42,35 @@ export const useHabitStore = defineStore('habits', () => {
 
   async function removeHabit(id: number) {
     await habitApi.remove(id)
+    // Filtramos las dos listas sin comprobar antes en cual estaba el
+    // habito - un habito puede eliminarse permanentemente tanto desde la
+    // lista activa como desde el archivo, y esta funcion sirve para
+    // ambos casos sin necesitar saber de donde la llamaron.
     habits.value = habits.value.filter((h) => h.id !== id)
+    archivedHabits.value = archivedHabits.value.filter((h) => h.id !== id)
     completedToday.value.delete(id)
+  }
+
+  async function fetchArchivedHabits() {
+    loading.value = true
+    error.value = null
+    try {
+      archivedHabits.value = await habitApi.getArchived()
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error cargando el archivo'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function archiveHabit(id: number) {
+    await habitApi.archive(id)
+    habits.value = habits.value.filter((h) => h.id !== id)
+  }
+
+  async function unarchiveHabit(id: number) {
+    await habitApi.unarchive(id)
+    archivedHabits.value = archivedHabits.value.filter((h) => h.id !== id)
   }
 
   async function toggleToday(id: number, completed: boolean) {
@@ -61,5 +89,19 @@ export const useHabitStore = defineStore('habits', () => {
     }
   }
 
-  return { habits, loading, error, completedToday, fetchHabits, addHabit, updateHabit, removeHabit, toggleToday }
+  return {
+    habits,
+    archivedHabits,
+    loading,
+    error,
+    completedToday,
+    fetchHabits,
+    fetchArchivedHabits,
+    addHabit,
+    updateHabit,
+    removeHabit,
+    archiveHabit,
+    unarchiveHabit,
+    toggleToday
+  }
 })
