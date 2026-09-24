@@ -60,11 +60,19 @@ body {
   padding: 0;
 }
 
+html {
+  /* Esto es lo que de verdad escala toda la app: cualquier tamano en
+     "rem" del proyecto (y son casi todos) se calcula sobre el font-size
+     de <html>, no el de <body>. Antes no se fijaba aqui, asi que usaba
+     el valor por defecto del navegador (16px) y el "16px" de body de
+     abajo no tenia ningun efecto real sobre el resto del sitio. */
+  font-size: 18px;
+}
+
 body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-body);
-  font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }

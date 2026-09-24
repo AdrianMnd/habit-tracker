@@ -36,7 +36,12 @@ function handleLogout() {
 
 <style scoped>
 .sidebar {
-  width: 220px;
+  /* 220px -> 240px: con el padding horizontal (--space-6, 1.5rem a
+     cada lado), el logo (28px) y el gap entre logo y texto (--space-3),
+     a .sidebar__title solo le quedaban ~125px de ancho real, insuficiente
+     para "Habit Tracker" en la tipografia de --font-display (mas ancha
+     que una sans-serif de sistema) y forzaba el salto a dos lineas. */
+  width: 240px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -55,6 +60,12 @@ function handleLogout() {
   align-items: center;
   gap: var(--space-3);
   margin-bottom: var(--space-8);
+  /* min-width: 0 en el contenedor flex, para que el hijo con
+     overflow/text-overflow (.sidebar__title) pueda de verdad encogerse
+     por debajo de su ancho de contenido en vez de desbordar la fila -
+     el mismo truco que .app-content y .chat-log ya usan en sus propios
+     ejes. */
+  min-width: 0;
 }
 
 .sidebar__logo {
@@ -67,6 +78,16 @@ function handleLogout() {
   font-size: 1.15rem;
   color: var(--color-ink);
   margin: 0;
+  /* white-space: nowrap es la unica forma fiable de forzar una sola
+     linea - reducir solo el ancho del contenedor o el font-size es
+     fragil (vuelve a romperse con un email de usuario largo al lado,
+     un zoom del navegador, etc). Con overflow/text-overflow anadimos
+     una salida "elegante" (puntos suspensivos) para el caso extremo en
+     que, aun asi, no quepa - ver tambien .sidebar__email, que ya usa
+     el mismo patron. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar__nav {

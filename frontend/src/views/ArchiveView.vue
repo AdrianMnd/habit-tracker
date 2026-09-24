@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useHabitStore } from '@/stores/habitStore'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 
 const store = useHabitStore()
 
@@ -25,7 +26,7 @@ async function handleDeletePermanently(id: number) {
       Puedes restaurarlos en cualquier momento, o eliminarlos del todo si ya no los necesitas.
     </p>
 
-    <p v-if="store.loading" class="status-text">Cargando...</p>
+    <LoadingSpinner v-if="store.loading" label="Cargando archivo..." />
     <p v-else-if="store.error" class="status-text status-text--error">{{ store.error }}</p>
 
     <div v-else-if="store.archivedHabits.length === 0" class="empty-state">
@@ -51,7 +52,7 @@ async function handleDeletePermanently(id: number) {
 
 <style scoped>
 .archive-view {
-  max-width: 560px;
+  max-width: 820px;
 }
 
 .archive-view h2 {

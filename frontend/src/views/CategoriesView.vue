@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useCategoryStore } from '@/stores/categoryStore'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 
 const store = useCategoryStore()
 const newName = ref('')
@@ -45,7 +46,7 @@ async function handleRemove(id: number) {
     </form>
 
     <p v-if="formError" class="status-text status-text--error">{{ formError }}</p>
-    <p v-if="store.loading" class="status-text">Cargando...</p>
+    <LoadingSpinner v-if="store.loading" label="Cargando categorías..." />
     <p v-else-if="store.error" class="status-text status-text--error">{{ store.error }}</p>
 
     <div v-else-if="store.categories.length === 0" class="empty-state">
@@ -63,7 +64,7 @@ async function handleRemove(id: number) {
 
 <style scoped>
 .categories-view {
-  max-width: 480px;
+  max-width: 820px;
 }
 
 .categories-view h2 {

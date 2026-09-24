@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { habitApi } from '@/services/habitApi'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import type { Habit, Streak } from '@/types/habit'
 
 const props = defineProps<{
@@ -9,16 +10,31 @@ const props = defineProps<{
 
 const habit = ref<Habit | null>(null)
 const streak = ref<Streak | null>(null)
+const loading = ref(true)
+const error = ref<string | null>(null)
 
 onMounted(async () => {
-  const habitId = Number(props.id)
-  habit.value = await habitApi.getById(habitId)
-  streak.value = await habitApi.getStreak(habitId)
+  try {
+    const habitId = Number(props.id)
+    habit.value = await habitApi.getById(habitId)
+    streak.value = await habitApi.getStreak(habitId)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'No se pudo cargar el hábito'
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
 <template>
-  <div v-if="habit" class="habit-detail panel">
+  <LoadingSpinner v-if="loading" label="Cargando hábito..." />
+
+  <div v-else-if="error" class="habit-detail panel">
+    <RouterLink to="/" class="back-link">← Mis hábitos</RouterLink>
+    <p class="status-text status-text--error">{{ error }}</p>
+  </div>
+
+  <div v-else-if="habit" class="habit-detail panel">
     <RouterLink to="/" class="back-link">← Mis hábitos</RouterLink>
 
     <h2>{{ habit.name }}</h2>
@@ -59,6 +75,10 @@ onMounted(async () => {
 .description {
   color: var(--color-ink-soft);
   margin-top: var(--space-2);
+}
+
+.status-text--error {
+  color: var(--color-danger);
 }
 
 .streak-row {
