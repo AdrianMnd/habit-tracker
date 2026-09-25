@@ -22,7 +22,8 @@ Aprender/consolidar:
 - [x] Calendario semanal de hábitos
 - [x] Logo/favicon
 - [x] Tests e2e (Playwright)
-- [ ] CI (GitHub Actions)
+- [x] CI (GitHub Actions)
+- [x] PWA (instalable, con caché offline del app shell vía Service Worker)
 
 ## Estructura
 
@@ -101,12 +102,18 @@ La API es multiusuario: cada hábito pertenece a quien lo creó, y ningún endpo
   [System.Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
   ```
 
+## PWA
+
+La app es instalable desde el navegador (Chrome/Edge) y cachea su app shell para arrancar sin conexión:
+- `frontend/public/manifest.json`: nombre, iconos (192/512 + variante maskable para Android), colores de tema a juego con el modo oscuro por defecto.
+- `frontend/public/sw.js`: Service Worker con estrategia cache-first para el app shell y paso directo a red para todo lo que vaya a `/api/` (nunca se cachean datos de hábitos ni peticiones que no sean `GET`).
+- El registro (`frontend/src/main.ts`) solo se activa en producción (`import.meta.env.PROD`) para no interferir con el hot-reload de `npm run dev`.
+
+Para comprobarlo: Chrome DevTools → pestaña **Application** → **Manifest** (valida los criterios de instalabilidad) y **Service Workers** (estado del SW, útil para forzar una reinstalación con "Update on reload" mientras se depura).
+
 ## Despliegue
 
 - **Backend**: Render, servicio Docker (`backend/Dockerfile`, build multi-stage). Health check en `/actuator/health`.
 - **Frontend**: Vercel, `frontend/` como root directory, framework Vite.
 - Variables de entorno de producción se configuran en el panel de cada plataforma (no en `.env`, que es solo para local).
-
-## Próximos pasos
-
-Ver los pendientes marcados como `[ ]` arriba: calendario semanal, logo/rediseño visual, tests e2e, CI.
+- El Auto-Deploy del backend en Render está en modo "After CI checks pass" (espera a que el pipeline de CI esté en verde antes de desplegar).
