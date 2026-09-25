@@ -19,6 +19,11 @@
 
     <properties>
         <java.version>21</java.version>
+        <!-- Sobrescribe la version de Testcontainers que trae Spring Boot 3.3.x
+             (1.19.x): esa version habla con Docker usando la API 1.32, que
+             Docker Engine 29+ rechaza con un 400 ("Could not find a valid
+             Docker environment"). 1.21.4 es compatible con Docker 29. -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -102,6 +107,30 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Testcontainers: levanta un Postgres real en Docker para los tests
+             de integracion (repositorios), en vez de mockear el repositorio
+             (como en HabitServiceTest) o usar una base en memoria como H2 que
+             no reproduce fielmente el comportamiento de Postgres (constraints,
+             tipos, JPQL traducido a SQL real). Las versiones NO se indican a
+             mano: spring-boot-starter-parent ya gestiona el BOM de
+             Testcontainers acorde a esta version de Spring Boot, igual que ya
+             hace con el resto de starters de este pom. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

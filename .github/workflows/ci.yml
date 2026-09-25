@@ -30,11 +30,15 @@ jobs:
           # descargar todo Spring Boot en cada run.
           cache: maven
 
-      # Los tests actuales (HabitServiceTest, AuthServiceTest) son tests
-      # unitarios puros con Mockito (@ExtendWith(MockitoExtension.class)),
-      # sin @SpringBootTest ni contexto de Spring real - por eso este job
-      # NO necesita una Postgres levantada, a diferencia del job de e2e
-      # de mas abajo.
+      # HabitServiceTest/AuthServiceTest son tests unitarios puros con
+      # Mockito, sin contexto de Spring real - no necesitan Postgres.
+      # HabitRepositoryIntegrationTest si la necesita (Testcontainers,
+      # ver esa clase), pero a diferencia del job de e2e de mas abajo no
+      # hace falta declarar un "services: postgres:" aqui: los runners
+      # de GitHub Actions ya traen un daemon Docker disponible, y
+      # Testcontainers arranca/para el contenedor el solo durante el
+      # propio test - una de las ventajas de Testcontainers frente al
+      # patron "services" manual de e2e-tests.
       - run: mvn -B test
 
   frontend-tests:
