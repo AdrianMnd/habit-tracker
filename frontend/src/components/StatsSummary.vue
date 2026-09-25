@@ -54,6 +54,15 @@ onMounted(async () => {
   text-align: center;
   gap: var(--space-2);
   padding: var(--space-6);
+  /* Un item de CSS Grid tiene, por defecto, min-width: auto - se
+     calcula a partir del contenido y NO de la pista (1fr) que le
+     asigna el grid, exactamente igual que min-width: auto en un item
+     flex (ver .app-content mas arriba). Cuando la columna 1fr real
+     resultaba mas estrecha que ese minimo, la tarjeta desbordaba su
+     propia pista en vez de dejar que su contenido (el numero, la
+     etiqueta) se ajustara dentro - de ahi que se viera "cortada" en
+     vez de simplemente mas compacta. */
+  min-width: 0;
 }
 
 .stat-card__value {
