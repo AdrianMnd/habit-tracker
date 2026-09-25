@@ -2,6 +2,16 @@
 
 Proyecto de práctica para afianzar **Vue 3** en frontend y **Java + Spring Boot** en backend, con integración de IA (Gemini, con streaming) para sugerir y comentar hábitos. Monorepo, desplegado en producción: backend con Docker en Render, frontend en Vercel.
 
+## Capturas
+
+| Hábitos + chat con IA | Calendario semanal |
+|---|---|
+| ![Vista principal con el listado de hábitos y el panel de chat con la IA](docs/screenshots/home.png) | ![Calendario semanal de cumplimiento por hábito](docs/screenshots/calendar.png) |
+
+| Progreso | Inicio de sesión |
+|---|---|
+| ![Gráficas de tendencia de cumplimiento y racha por hábito](docs/screenshots/progress.png) | ![Pantalla de inicio de sesión](docs/screenshots/login.png) |
+
 ## Objetivo del proyecto
 
 Aprender/consolidar:
