@@ -11,6 +11,7 @@ frontend/.env
 frontend/test-results/
 frontend/playwright-report/
 frontend/blob-report/
+frontend/*.tsbuildinfo
 
 # IDE / OS
 .idea/
