@@ -8,6 +8,9 @@ backend/.env
 frontend/node_modules/
 frontend/dist/
 frontend/.env
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
 
 # IDE / OS
 .idea/
