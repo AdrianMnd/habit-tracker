@@ -15,7 +15,18 @@ export async function apiRequest<T>(path: string, options?: RequestInit): Promis
     ...options
   })
 
-  if (response.status === 401) {
+  // Ojo: "token" (no solo response.status === 401) - un 401 en
+  // /auth/login por contraseña incorrecta tambien es un 401, pero ahi NO
+  // habia sesion que haya caducado (no se envio ningun Bearer token en
+  // absoluto). Sin este chequeo, un login fallido se trataba igual que
+  // un token caducado: se forzaba un window.location.href (recarga dura
+  // de pagina, no una navegacion de Vue Router) que perdia el mensaje de
+  // error real del backend y el estado de authStore.error antes de que
+  // LoginView llegara a pintarlo - el usuario solo veia un parpadeo y
+  // volvia a la pantalla de login sin explicacion. Lo detectaron los
+  // tests e2e: la aserción sobre el mensaje de error nunca encontraba el
+  // texto porque la pagina se habia recargado por completo entretanto.
+  if (response.status === 401 && token) {
     // El token ha caducado o no es valido: no tiene sentido seguir
     // "logueado" en el frontend si el backend ya no reconoce el token.
     tokenStorage.clear()

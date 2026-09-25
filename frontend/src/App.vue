@@ -59,25 +59,49 @@ useThemeStore()
 
 .app-main {
   flex: 1;
-  min-width: 0;
+  /* min-width, no width fijo: app-main es "lo que sobra" despues del
+     sidebar y el chat, y ese resto puede llegar a ser muy estrecho en
+     anchos intermedios (portatil con el sidebar de 240px y el chat de
+     hasta 460px ya restan 700px antes de empezar). 480px es, mas o
+     menos, el ancho por debajo del cual el listado de habitos y las
+     stat cards dejan de leerse bien (nombres partiendose palabra a
+     palabra, tarjetas de stats desbordando su grid) - por debajo de
+     eso ya preferimos que el layout entero pase a apilarse en columna
+     (ver la media query de mas abajo) antes que seguir comprimiendo. */
+  min-width: 480px;
   max-width: 1200px;
   padding: var(--space-8);
 }
 
 .app-chat {
-  /* Antes 360px fijos: en pantallas anchas app-main se queda con su
-     max-width: 1200px y sobra ancho de sobra a la derecha que el chat
-     no aprovechaba. 460px sigue siendo una columna lateral razonable
-     (no un panel principal), pero usa mejor ese espacio libre. */
-  width: 460px;
+  /* clamp(min, preferido, max) en vez de un ancho fijo: en pantallas
+     muy anchas se queda en 460px (no tiene sentido que un panel
+     lateral crezca sin limite), pero en anchos intermedios se encoge
+     con el viewport (26vw) hasta un minimo de 320px - ese encogimiento
+     gradual es lo que le devuelve sitio a app-main antes de llegar a
+     su min-width y forzar el paso a una sola columna. Con un valor
+     fijo de 460px, app-chat nunca cedia nada de ese ancho y era
+     siempre app-main quien pagaba el precio. */
+  width: clamp(320px, 26vw, 460px);
   flex-shrink: 0;
   padding: var(--space-8) var(--space-8) var(--space-8) 0;
 }
 
-@media (max-width: 900px) {
+/* 1180px, no 900px: con sidebar (240px) + app-main en su minimo
+   (480px) + app-chat en su minimo (320px) + el padding de ambos lados,
+   la suma minima para que las tres columnas convivan sin comprimirse
+   rondaba ~1150-1200px. Con el breakpoint antiguo en 900px, cualquier
+   portatil o ventana entre 900 y 1180px caia justo en la zona rota que
+   viste en la captura: ni suficientemente ancho para las tres columnas
+   ni por debajo del breakpoint que las apila. */
+@media (max-width: 1180px) {
   .app-content {
     flex-direction: column;
     min-height: auto;
+  }
+
+  .app-main {
+    min-width: 0;
   }
 
   .app-chat {

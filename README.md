@@ -19,9 +19,9 @@ Aprender/consolidar:
 - [x] Tema visual oscuro con sistema de tokens CSS
 - [x] Autenticación JWT + multiusuario (Spring Security)
 - [x] Despliegue: backend con Docker en Render, frontend en Vercel
-- [ ] Calendario semanal de hábitos
-- [ ] Logo/favicon y rediseño visual
-- [ ] Tests e2e
+- [x] Calendario semanal de hábitos
+- [x] Logo/favicon
+- [x] Tests e2e (Playwright)
 - [ ] CI (GitHub Actions)
 
 ## Estructura
@@ -49,6 +49,29 @@ npm install
 cp .env.example .env
 npm run dev
 ```
+
+### Postgres para desarrollo/e2e
+Los tests e2e (y opcionalmente el backend en local, si no quieres usar la BD de Neon en desarrollo) necesitan una Postgres accesible en `localhost:5432`. `docker-compose.yml`, en la raíz del repo, levanta una con los mismos valores que ya asume `application.properties` por defecto (`habit_tracker` / `postgres` / `postgres`), así que no hace falta tocar `DATABASE_URL` en el `.env` para usarla:
+```bash
+docker compose up -d
+```
+
+## Tests
+
+### Unitarios
+```bash
+cd backend && mvn test        # JUnit + Mockito + AssertJ
+cd frontend && npm run test:unit   # Vitest + jsdom
+```
+
+### End-to-end (Playwright)
+Necesitan el backend real arrancado y accesible en `http://localhost:8080` (con Postgres arriba, ver más arriba) - Playwright arranca el frontend automáticamente, pero no el backend, porque este necesita su propio `.env` (`JWT_SECRET` sobre todo) y no tiene sentido orquestarlo desde el config de tests:
+```bash
+docker compose up -d
+cd backend && mvn spring-boot:run   # en una terminal aparte, déjalo corriendo
+cd frontend && npm run test:e2e
+```
+Cada test registra su propio usuario con un email único (timestamp), así que se pueden ejecutar repetidamente sin limpiar la base de datos entre tandas - solo va acumulando usuarios y hábitos de prueba, sin interferir entre ejecuciones.
 
 ## Autenticación
 

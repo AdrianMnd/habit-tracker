@@ -1,0 +1,25 @@
+# Postgres para desarrollo local y para los tests e2e - NO se usa en
+# produccion (Render usa su propia instancia de Neon, ver backend/.env).
+# Los valores por defecto de application.properties (spring.datasource.url,
+# username, password) ya apuntan exactamente a esto, asi que con este
+# servicio arriba el backend arranca en local sin necesidad de configurar
+# DATABASE_URL/DATABASE_USERNAME/DATABASE_PASSWORD en el .env.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: habit_tracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - habit-tracker-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  habit-tracker-db:
