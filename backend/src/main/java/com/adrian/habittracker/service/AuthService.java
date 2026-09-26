@@ -17,6 +17,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.adrian.habittracker.service.RefreshTokenService.Rotation;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +27,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -38,8 +40,7 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         userRepository.save(user);
 
-        String token = jwtService.generateToken(user.getEmail());
-        return new AuthResponse(token, user.getEmail());
+        return buildAuthResponse(user);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -54,8 +55,25 @@ public class AuthService {
             throw new BadCredentialsException("Email o contraseña incorrectos");
         }
 
-        String token = jwtService.generateToken(request.email());
-        return new AuthResponse(token, request.email());
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new BadCredentialsException("Email o contraseña incorrectos"));
+        return buildAuthResponse(user);
+    }
+
+    public AuthResponse refresh(String refreshToken) {
+        Rotation rotation = refreshTokenService.rotate(refreshToken);
+        String email = rotation.user().getEmail();
+        return new AuthResponse(jwtService.generateToken(email), rotation.newRefreshToken(), email);
+    }
+
+    public void logout(String refreshToken) {
+        refreshTokenService.revoke(refreshToken);
+    }
+
+    private AuthResponse buildAuthResponse(User user) {
+        String accessToken = jwtService.generateToken(user.getEmail());
+        String refreshToken = refreshTokenService.issue(user);
+        return new AuthResponse(accessToken, refreshToken, user.getEmail());
     }
 
     @Transactional

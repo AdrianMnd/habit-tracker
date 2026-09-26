@@ -1,7 +1,5 @@
-import { tokenStorage } from '@/services/tokenStorage'
+import { authorizedFetch } from '@/services/http'
 import type { AiChatRequest } from '@/types/habit'
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
 
 /**
  * Consume el endpoint de streaming (Server-Sent Events) como un async
@@ -12,23 +10,13 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
  * usuario en un POST con JSON.
  */
 async function* streamChat(data: AiChatRequest): AsyncGenerator<string> {
-  const token = tokenStorage.getToken()
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-
-  const response = await fetch(`${BASE_URL}/ai/chat/stream`, {
+  // Misma renovacion automatica del access token que el resto de la API:
+  // antes este archivo duplicaba a mano la cabecera Authorization y el
+  // manejo del 401.
+  const response = await authorizedFetch('/ai/chat/stream', {
     method: 'POST',
-    headers,
     body: JSON.stringify(data)
   })
-
-  if (response.status === 401) {
-    tokenStorage.clear()
-    window.location.href = '/login'
-    throw new Error('Sesion caducada, vuelve a iniciar sesion')
-  }
 
   if (!response.ok || !response.body) {
     const body = await response.json().catch(() => null)

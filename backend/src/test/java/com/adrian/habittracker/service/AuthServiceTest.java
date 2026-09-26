@@ -47,6 +47,9 @@ class AuthServiceTest {
     @Mock
     private AuthenticationManager authenticationManager;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -69,12 +72,14 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("adrian@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("$2a$10$hashed");
         when(jwtService.generateToken("adrian@example.com")).thenReturn("fake-jwt");
+        when(refreshTokenService.issue(any(User.class))).thenReturn("fake-refresh");
 
         RegisterRequest request = new RegisterRequest("adrian@example.com", "password123");
         AuthResponse response = authService.register(request);
 
         assertThat(response.token()).isEqualTo("fake-jwt");
         assertThat(response.email()).isEqualTo("adrian@example.com");
+        assertThat(response.refreshToken()).isEqualTo("fake-refresh");
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
@@ -83,14 +88,34 @@ class AuthServiceTest {
         assertThat(captor.getValue().getPasswordHash()).isEqualTo("$2a$10$hashed");
     }
 
-    @Test
-    void loginConCredencialesValidasDevuelveToken() {
+       @Test
+    void loginConCredencialesValidasDevuelveAccessYRefreshToken() {
+        User user = new User();
+        user.setId(USER_ID);
+        user.setEmail("adrian@example.com");
+        when(userRepository.findByEmail("adrian@example.com")).thenReturn(Optional.of(user));
         when(jwtService.generateToken("adrian@example.com")).thenReturn("fake-jwt");
+        when(refreshTokenService.issue(user)).thenReturn("fake-refresh");
 
         AuthResponse response = authService.login(new LoginRequest("adrian@example.com", "password123"));
 
         assertThat(response.token()).isEqualTo("fake-jwt");
+        assertThat(response.refreshToken()).isEqualTo("fake-refresh");
         assertThat(response.email()).isEqualTo("adrian@example.com");
+    }
+
+    @Test
+    void refreshDevuelveUnAccessTokenNuevoYElRefreshTokenRotado() {
+        User user = new User();
+        user.setEmail("adrian@example.com");
+        when(refreshTokenService.rotate("refresh-viejo"))
+                .thenReturn(new RefreshTokenService.Rotation(user, "refresh-nuevo"));
+        when(jwtService.generateToken("adrian@example.com")).thenReturn("jwt-nuevo");
+
+        AuthResponse response = authService.refresh("refresh-viejo");
+
+        assertThat(response.token()).isEqualTo("jwt-nuevo");
+        assertThat(response.refreshToken()).isEqualTo("refresh-nuevo");
     }
 
     @Test
