@@ -17,7 +17,7 @@ async function handleSend() {
 }
 
 async function handleAddSuggestion(suggestion: HabitSuggestion) {
-  await habitStore.addHabit({ name: suggestion.name, description: suggestion.description })
+  await habitStore.addHabit({ name: suggestion.name, description: suggestion.description ?? undefined })
   addedNames.value.add(suggestion.name)
 }
 </script>

@@ -25,7 +25,7 @@ Aprender/consolidar:
 
 - [x] CRUD de hábitos + registro de cumplimiento diario + cálculo de racha
 - [x] Tests unitarios del cálculo de racha (JUnit + Mockito)
-- [x] Chat con Gemini, con streaming (SSE) y sugerencias de hábitos parseadas en vivo
+- [x] Chat con Gemini con function calling (consultar, sugerir, crear y archivar hábitos) y streaming SSE
 - [x] Tema visual oscuro con sistema de tokens CSS
 - [x] Autenticación JWT + multiusuario (Spring Security)
 - [x] Despliegue: backend con Docker en Render, frontend en Vercel
