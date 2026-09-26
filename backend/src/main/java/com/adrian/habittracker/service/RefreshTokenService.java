@@ -62,7 +62,7 @@ public class RefreshTokenService {
      * token es de UN SOLO USO.
      *
      * noRollbackFor: por defecto, una RuntimeException lanzada dentro de un
-     * metodo @Transactional deshace TODO lo que hizo la transaccion. En el
+     * metodo @Transactional deshace todo lo que hizo la transaccion. En el
      * caso de reutilizacion queremos justo lo contrario: revocar todas las
      * sesiones del usuario Y ADEMAS responder con error. Sin noRollbackFor,
      * el throw de abajo desharia el revokeAllActiveByUserId() que lo precede

@@ -9,7 +9,6 @@ import com.adrian.habittracker.exception.EmailAlreadyInUseException;
 import com.adrian.habittracker.exception.ResourceNotFoundException;
 import com.adrian.habittracker.repository.UserRepository;
 import com.adrian.habittracker.security.JwtService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
