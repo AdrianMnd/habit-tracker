@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { useHabitChat } from '@/composables/useHabitChat'
 import { useHabitStore } from '@/stores/habitStore'
 import type { HabitSuggestion } from '@/types/habit'
@@ -10,14 +10,56 @@ const habitStore = useHabitStore()
 const draft = ref('')
 const addedNames = ref(new Set<string>())
 
+// Template ref: Vue rellena esta variable con el elemento <div> real del
+// DOM que lleva ref="chatLog" en la plantilla (el equivalente a un
+// @ViewChild de Angular). Es null hasta que el componente se monta.
+const chatLog = ref<HTMLElement | null>(null)
+
+// "Pegado al fondo": solo seguimos automaticamente el ultimo mensaje si el
+// usuario ya estaba abajo del todo. Si ha subido a releer algo, no le
+// arrancamos de ahi en cada token que llega - volveremos a seguirle en
+// cuanto baje otra vez, o cuando envie un mensaje nuevo.
+const stickToBottom = ref(true)
+const STICK_THRESHOLD_PX = 40
+
+function handleScroll() {
+  const el = chatLog.value
+  if (!el) return
+  // scrollHeight: alto TOTAL del contenido; scrollTop: cuanto se ha
+  // desplazado; clientHeight: alto visible. Si lo que queda por debajo
+  // de la parte visible es casi nada, el usuario esta "abajo".
+  const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+  stickToBottom.value = distanceToBottom < STICK_THRESHOLD_PX
+}
+
+// deep: true para enterarnos tambien de los cambios DENTRO de cada mensaje
+// (el texto que va creciendo token a token, las sugerencias que llegan),
+// no solo de que se añadan mensajes nuevos al array. Tambien miramos
+// sending/error porque "Pensando..." y los errores se pintan en el log.
+watch(
+  [messages, sending, error],
+  async () => {
+    if (!stickToBottom.value) return
+    // Esperamos a que Vue pinte el cambio: justo ahora el DOM aun tiene el
+    // alto ANTERIOR, y bajar hasta ahi dejaria oculto el trozo nuevo.
+    await nextTick()
+    const el = chatLog.value
+    if (el) el.scrollTop = el.scrollHeight
+  },
+  { deep: true }
+)
+
 async function handleSend() {
   const text = draft.value
   draft.value = ''
+  // Al enviar, el usuario quiere ver su mensaje y la respuesta aunque
+  // estuviera releyendo mas arriba.
+  stickToBottom.value = true
   await sendMessage(text)
 }
 
 async function handleAddSuggestion(suggestion: HabitSuggestion) {
-  await habitStore.addHabit({ name: suggestion.name, description: suggestion.description })
+  await habitStore.addHabit({ name: suggestion.name, description: suggestion.description ?? undefined })
   addedNames.value.add(suggestion.name)
 }
 </script>
@@ -30,7 +72,7 @@ async function handleAddSuggestion(suggestion: HabitSuggestion) {
       sobre tus hábitos actuales.
     </p>
 
-    <div class="chat-log">
+    <div class="chat-log" ref="chatLog" @scroll="handleScroll">
       <div
         v-for="(message, index) in messages"
         :key="index"

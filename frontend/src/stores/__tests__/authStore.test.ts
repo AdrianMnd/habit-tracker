@@ -14,17 +14,25 @@ vi.mock('@/services/authApi', () => ({
   authApi: {
     login: vi.fn(),
     register: vi.fn(),
+    logout: vi.fn(),
     changePassword: vi.fn()
   }
 }))
 
 import { authApi } from '@/services/authApi'
 
+const loginResponse = () => ({
+  token: makeToken(900),
+  refreshToken: 'refresh-abc',
+  email: 'adrian@example.com'
+})
+
 describe('authStore', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
     vi.mocked(authApi.login).mockReset()
+    vi.mocked(authApi.logout).mockReset().mockResolvedValue(undefined)
   })
 
   it('isAuthenticated pasa a true tras un login exitoso sin recargar la pagina', async () => {
@@ -35,36 +43,50 @@ describe('authStore', () => {
     const store = useAuthStore()
     expect(store.isAuthenticated).toBe(false)
 
-    vi.mocked(authApi.login).mockResolvedValue({ token: makeToken(3600), email: 'adrian@example.com' })
+    vi.mocked(authApi.login).mockResolvedValue(loginResponse())
 
     await store.login({ email: 'adrian@example.com', password: 'secret123' })
 
     expect(store.isAuthenticated).toBe(true)
     expect(store.email).toBe('adrian@example.com')
+    expect(tokenStorage.getRefreshToken()).toBe('refresh-abc')
   })
 
-  it('un token expirado guardado de una sesion anterior no autentica al arrancar', () => {
-    tokenStorage.save(makeToken(-60), 'adrian@example.com')
+  it('la sesion sobrevive al arrancar aunque el access token guardado haya caducado', () => {
+    // Access token caducado hace un minuto, pero refresh token presente:
+    // la sesion sigue viva (http.ts renovara el access token en la
+    // primera peticion). Antes de los refresh tokens, esto era un logout.
+    tokenStorage.save(makeToken(-60), 'refresh-abc', 'adrian@example.com')
+
+    const store = useAuthStore()
+
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.email).toBe('adrian@example.com')
+  })
+
+  it('sin refresh token guardado no hay sesion, y se limpian los restos de una sesion antigua', () => {
+    // Simula una sesion de antes de este cambio: solo el access token.
+    localStorage.setItem('habit-tracker:token', makeToken(3600))
+    localStorage.setItem('habit-tracker:email', 'adrian@example.com')
 
     const store = useAuthStore()
 
     expect(store.isAuthenticated).toBe(false)
-    // Ademas de no autenticar, el token caducado se descarta de
-    // localStorage - si no, cada recarga repetiria el mismo chequeo.
     expect(tokenStorage.getToken()).toBeNull()
   })
 
-  it('logout limpia el estado en memoria y el localStorage', async () => {
+  it('logout limpia el estado local y revoca el refresh token en el backend', async () => {
     const store = useAuthStore()
-    vi.mocked(authApi.login).mockResolvedValue({ token: makeToken(3600), email: 'adrian@example.com' })
+    vi.mocked(authApi.login).mockResolvedValue(loginResponse())
     await store.login({ email: 'adrian@example.com', password: 'secret123' })
-    expect(store.isAuthenticated).toBe(true)
 
     store.logout()
 
     expect(store.isAuthenticated).toBe(false)
     expect(store.email).toBeNull()
     expect(tokenStorage.getToken()).toBeNull()
+    expect(tokenStorage.getRefreshToken()).toBeNull()
+    expect(authApi.logout).toHaveBeenCalledWith('refresh-abc')
   })
 
   it('un login fallido deja error relleno y no autentica', async () => {

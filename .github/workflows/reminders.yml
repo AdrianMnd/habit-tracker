@@ -1,0 +1,35 @@
+name: Recordatorios push
+
+# Dispara cada hora el envio de recordatorios. El backend decide a quien le
+# toca (segun su hora y zona horaria): este workflow solo "toca el timbre".
+#
+# No se usa @Scheduled en Spring porque el plan gratuito de Render duerme el
+# backend tras 15 min sin trafico, y un proceso dormido no ejecuta nada. Esta
+# llamada lo despierta (cold start de ~1 min) y lanza el envio.
+on:
+  schedule:
+    # Minuto 7 de cada hora, en UTC (el cron de GitHub SIEMPRE va en UTC).
+    # No en el :00 a proposito: es la hora punta de GitHub Actions y los
+    # retrasos son mayores. El backend tolera retrasos igualmente.
+    - cron: '7 * * * *'
+  # Permite lanzarlo a mano desde la pestaña Actions (util para probar).
+  workflow_dispatch:
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lanzar el envio de recordatorios
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        # --max-time 120: margen para el arranque en frio de Render.
+        # --retry: reintenta ante fallos de red o 5xx transitorios.
+        # --fail-with-body: si el backend responde con error, el job falla
+        # (y GitHub te avisa por email) pero se ve la respuesta en el log.
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --max-time 120 --retry 2 --retry-delay 20 \
+            -X POST \
+            -H "X-Cron-Secret: ${CRON_SECRET}" \
+            "${BACKEND_URL}/api/internal/reminders/run"

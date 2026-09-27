@@ -3,12 +3,24 @@ import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
 import AppSidebar from '@/components/AppSidebar.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 const authStore = useAuthStore()
 // No se usa directamente en el template - basta con instanciarlo aqui
 // para que aplique el tema guardado nada mas arrancar la app, sin
 // esperar a que el usuario visite Ajustes.
 useThemeStore()
+// En escritorio, quien hace scroll ya no es la ventana sino <main> (ver el
+// CSS de abajo). El scrollBehavior de Vue Router solo sabe devolver arriba
+// la VENTANA al cambiar de ruta, asi que sin esto, si bajas en la lista de
+// habitos y navegas a Calendario, la nueva vista apareceria ya desplazada.
+const route = useRoute()
+const mainEl = ref<HTMLElement | null>(null)
+watch(
+  () => route.path,
+  () => mainEl.value?.scrollTo({ top: 0 })
+)
 </script>
 
 <template>
@@ -16,7 +28,7 @@ useThemeStore()
     <AppSidebar v-if="authStore.isAuthenticated" />
 
     <div class="app-content">
-      <main class="app-main">
+      <main class="app-main" ref="mainEl">
         <RouterView />
       </main>
 
@@ -87,6 +99,39 @@ useThemeStore()
   padding: var(--space-8) var(--space-8) var(--space-8) 0;
 }
 
+/* Escritorio (tres columnas): la app ocupa EXACTAMENTE el alto de la
+   ventana y la ventana nunca hace scroll. Cada columna gestiona el suyo
+   propio: <main> (la lista de habitos) con overflow-y: auto, y el chat
+   por dentro de .chat-log (ver ChatPanel.vue). Antes, .app-content solo
+   tenia min-height: 100vh - un MINIMO, no un maximo - asi que cada mensaje
+   nuevo del chat estiraba la columna y, con ella, la pagina entera.
+
+   El truco es encadenar alturas definidas de arriba abajo: si un
+   contenedor solo tiene min-height (o altura "auto"), sus hijos no tienen
+   ningun alto de referencia contra el que desbordar, y overflow: auto
+   nunca llega a activarse - el contenido simplemente crece. */
+@media (min-width: 1181px) {
+  .app--with-sidebar {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .app-content {
+    height: 100vh;
+    min-height: 0;
+  }
+
+  .app-main {
+    overflow-y: auto;
+  }
+
+  .app-chat {
+    /* box-sizing: border-box (global en main.css) hace que el padding de
+       esta columna quede DENTRO de los 100vh, no sumado encima. */
+    height: 100vh;
+  }
+}
+
 /* 1180px, no 900px: con sidebar (240px) + app-main en su minimo
    (480px) + app-chat en su minimo (320px) + el padding de ambos lados,
    la suma minima para que las tres columnas convivan sin comprimirse
@@ -107,6 +152,7 @@ useThemeStore()
   .app-chat {
     width: 100%;
     padding: 0 var(--space-4) var(--space-4);
+    height: 70vh;
   }
 }
 

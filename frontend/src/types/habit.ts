@@ -55,12 +55,18 @@ export interface Streak {
 
 export interface HabitSuggestion {
   name: string
-  description?: string
+  description?: string | null
 }
 
 export interface AiChatRequest {
   message: string
 }
+
+export type ChatStreamEvent =
+  | { type: 'text'; text: string }
+  | { type: 'suggestions'; suggestions: HabitSuggestion[] }
+  | { type: 'habits_changed' }
+  | { type: 'error'; message: string }
 
 export interface ChatMessage {
   role: 'user' | 'assistant'

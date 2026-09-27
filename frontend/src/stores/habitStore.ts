@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { habitApi } from '@/services/habitApi'
 import type { Habit, HabitRequest } from '@/types/habit'
+import { localIsoDate } from '@/utils/date'
 
 export const useHabitStore = defineStore('habits', () => {
   const habits = ref<Habit[]>([])
@@ -74,7 +75,8 @@ export const useHabitStore = defineStore('habits', () => {
   }
 
   async function toggleToday(id: number, completed: boolean) {
-    const today = new Date().toISOString().slice(0, 10)
+    // Fecha LOCAL, no UTC (ver utils/date.ts)
+    const today = localIsoDate()
     error.value = null
     try {
       await habitApi.logCompletion(id, { logDate: today, completed })

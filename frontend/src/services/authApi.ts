@@ -8,6 +8,9 @@ export const authApi = {
   login: (data: LoginRequest) =>
     apiRequest<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
 
+  logout: (refreshToken: string) =>
+    apiRequest<void>('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
+
   changePassword: (data: ChangePasswordRequest) =>
     apiRequest<void>('/users/me/password', { method: 'PATCH', body: JSON.stringify(data) })
 }

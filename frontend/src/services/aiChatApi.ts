@@ -1,7 +1,5 @@
-import { tokenStorage } from '@/services/tokenStorage'
-import type { AiChatRequest } from '@/types/habit'
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
+import { authorizedFetch } from '@/services/http'
+import type { AiChatRequest, ChatStreamEvent, HabitSuggestion } from '@/types/habit'
 
 /**
  * Consume el endpoint de streaming (Server-Sent Events) como un async
@@ -11,24 +9,11 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
  * peticiones GET sin cuerpo, y aqui necesitamos enviar el mensaje del
  * usuario en un POST con JSON.
  */
-async function* streamChat(data: AiChatRequest): AsyncGenerator<string> {
-  const token = tokenStorage.getToken()
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-
-  const response = await fetch(`${BASE_URL}/ai/chat/stream`, {
+async function* streamChat(data: AiChatRequest): AsyncGenerator<ChatStreamEvent> {
+  const response = await authorizedFetch('/ai/chat/stream', {
     method: 'POST',
-    headers,
     body: JSON.stringify(data)
   })
-
-  if (response.status === 401) {
-    tokenStorage.clear()
-    window.location.href = '/login'
-    throw new Error('Sesion caducada, vuelve a iniciar sesion')
-  }
 
   if (!response.ok || !response.body) {
     const body = await response.json().catch(() => null)
@@ -45,28 +30,61 @@ async function* streamChat(data: AiChatRequest): AsyncGenerator<string> {
 
     buffer += decoder.decode(value, { stream: true })
 
-    // Los eventos SSE vienen separados por una linea en blanco.
-    // Un chunk de red puede cortar un evento a la mitad, asi que
-    // guardamos en el buffer lo que aun no forme un evento completo.
-    const events = buffer.split('\n\n')
-    buffer = events.pop() ?? ''
+    // Los eventos SSE vienen separados por una linea en blanco. Un trozo
+    // de red puede cortar un evento a la mitad (incluso a mitad de la
+    // palabra "event:"), asi que lo que aun no forme un evento completo se
+    // queda en el buffer esperando al siguiente trozo.
+    const rawEvents = buffer.split('\n\n')
+    buffer = rawEvents.pop() ?? ''
 
-    for (const event of events) {
-      // Un solo evento SSE puede traer VARIAS lineas "data:" seguidas
-      // cuando el valor original contenia saltos de linea (asi lo exige
-      // el estandar SSE: cada linea del valor se reenvia con su propio
-      // prefijo "data:"). Hay que unirlas todas, no quedarnos solo con
-      // la primera, o perdemos texto por el camino.
-      const dataLines = event.split('\n').filter((l) => l.startsWith('data:'))
-      if (dataLines.length > 0) {
-        // El backend codifica cada fragmento como cadena JSON antes de
-        // enviarlo (ver AiChatService.toJsonString). JSON.parse() recupera
-        // el texto exacto sin depender de ninguna convencion de espacios
-        // de SSE - evita perder o duplicar espacios entre palabras.
-        const raw = dataLines.map((l) => l.slice('data:'.length)).join('\n').trim()
-        yield JSON.parse(raw) as string
-      }
+    for (const rawEvent of rawEvents) {
+      const event = parseSseEvent(rawEvent)
+      if (event) yield event
     }
+  }
+}
+
+/**
+ * Interpreta UN evento SSE completo:
+ *   event:suggestions
+ *   data:[{"name":"Beber agua","description":null}]
+ *
+ * Exportada solo para poder probarla aislada en los tests.
+ */
+export function parseSseEvent(rawEvent: string): ChatStreamEvent | null {
+  // Sin linea "event:", el estandar SSE dice que el evento se llama "message".
+  let name = 'message'
+  const dataLines: string[] = []
+
+  for (const line of rawEvent.split('\n')) {
+    if (line.startsWith('event:')) {
+      name = line.slice('event:'.length).trim()
+    } else if (line.startsWith('data:')) {
+      // Un valor con saltos de linea llega repartido en varias lineas
+      // "data:" seguidas (asi lo exige el estandar): hay que unirlas todas.
+      dataLines.push(line.slice('data:'.length))
+    }
+  }
+
+  if (dataLines.length === 0) return null
+
+  // El backend codifica SIEMPRE el data como JSON (ver AiChatService.event).
+  const payload: unknown = JSON.parse(dataLines.join('\n').trim())
+
+  switch (name) {
+    case 'text':
+      return { type: 'text', text: payload as string }
+    case 'suggestions':
+      return { type: 'suggestions', suggestions: payload as HabitSuggestion[] }
+    case 'habits_changed':
+      return { type: 'habits_changed' }
+    case 'error':
+      return { type: 'error', message: (payload as { message: string }).message }
+    default:
+      // Un tipo de evento que esta version del frontend no conoce (p. ej.
+      // uno nuevo que añada el backend en el futuro) se ignora en vez de
+      // romper el chat: compatibilidad hacia delante.
+      return null
   }
 }
 
