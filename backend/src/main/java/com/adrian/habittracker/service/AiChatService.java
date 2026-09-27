@@ -133,7 +133,7 @@ public class AiChatService {
                     .filter(text -> !text.isEmpty())
                     .map(text -> event("text", text));
 
-            // Flux.concat: primero se emite TODO el texto de esta vuelta y,
+            // Flux.concat: primero se emite todo el texto de esta vuelta y,
             // solo cuando termina, se evalua (defer) si hay herramientas que
             // ejecutar - para entonces modelParts ya esta completo.
             return Flux.concat(textEvents, Flux.defer(() -> handleToolCalls(userId, contents, modelParts, iteration)));
