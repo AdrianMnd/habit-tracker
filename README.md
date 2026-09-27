@@ -121,6 +121,14 @@ La app es instalable desde el navegador (Chrome/Edge) y cachea su app shell para
 
 Para comprobarlo: Chrome DevTools → pestaña **Application** → **Manifest** (valida los criterios de instalabilidad) y **Service Workers** (estado del SW, útil para forzar una reinstalación con "Update on reload" mientras se depura).
 
+## Notificaciones push
+
+Recordatorio diario a la hora que elija cada usuario (en Ajustes), solo si le quedan hábitos por marcar ese día:
+- **Cifrado y firma** (`backend/.../push/`): RFC 8291 (cifrado del mensaje) y RFC 8292 (VAPID) implementados con la criptografía del JDK, sin dependencias externas.
+- **Envío**: un cron horario de GitHub Actions (`.github/workflows/reminders.yml`) llama a `POST /api/internal/reminders/run`, protegido con la cabecera `X-Cron-Secret`. No se usa `@Scheduled` porque el plan gratuito de Render duerme el backend tras 15 min sin tráfico.
+- **Zona horaria**: la detecta el navegador y se guarda por usuario. El backend decide con la hora local de cada uno, tolera retrasos del cron y garantiza un solo envío al día (`UPDATE ... WHERE` atómico).
+- **Variables**: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` y `CRON_SECRET` en el backend; `CRON_SECRET` y `BACKEND_URL` como secrets de GitHub Actions. Claves VAPID: `npx web-push generate-vapid-keys`.
+
 ## Despliegue
 
 - **Backend**: Render, servicio Docker (`backend/Dockerfile`, build multi-stage). Health check en `/actuator/health`.

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { authApi } from '@/services/authApi'
 import { tokenStorage } from '@/services/tokenStorage'
 import type { AuthResponse, LoginRequest, RegisterRequest } from '@/types/auth'
+import { unsubscribeThisBrowserOnly } from '@/services/pushSubscription'
 
 export const useAuthStore = defineStore('auth', () => {
   // La sesion la define el REFRESH token, no el access token. El access
@@ -78,6 +79,10 @@ export const useAuthStore = defineStore('auth', () => {
       // El .catch() vacio evita un "unhandled promise rejection" en consola.
       authApi.logout(refreshToken).catch(() => {})
     }
+
+    // Deja de recibir notificaciones en este navegador (ver el comentario
+    // de unsubscribeThisBrowserOnly: importa en ordenadores compartidos).
+    unsubscribeThisBrowserOnly().catch(() => {})
   }
 
   return { email, error, loading, isAuthenticated, login, register, logout }

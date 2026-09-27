@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { authApi } from '@/services/authApi'
 import { useThemeStore } from '@/stores/themeStore'
+import { formatHour, usePushReminders } from '@/composables/usePushReminders'
 
 const themeStore = useThemeStore()
 
@@ -11,6 +12,38 @@ const confirmPassword = ref('')
 const submitting = ref(false)
 const error = ref<string | null>(null)
 const success = ref(false)
+
+// Desestructuramos (y renombramos los que chocan con los de la contraseña):
+// Vue solo "desenvuelve" automaticamente en la plantilla los refs de primer
+// nivel del setup - con "const reminders = usePushReminders()" habria que
+// escribir reminders.hour.value en el template, porque ahi reminders.hour
+// es un ref anidado dentro de un objeto normal.
+const {
+  supported: pushSupported,
+  timeZone,
+  loading: remindersLoading,
+  busy: remindersBusy,
+  serverEnabled: pushServerEnabled,
+  deviceSubscribed,
+  hour: reminderHour,
+  subscribedDevices,
+  error: remindersError,
+  info: remindersInfo,
+  load: loadReminders,
+  setDeviceEnabled,
+  setHour,
+  sendTest
+} = usePushReminders()
+
+const hours = Array.from({ length: 24 }, (_, i) => i)
+
+function onHourChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  // El valor de un <select> llega SIEMPRE como string: "" = desactivado.
+  setHour(value === '' ? null : Number(value))
+}
+
+onMounted(loadReminders)
 
 async function handleChangePassword() {
   error.value = null
@@ -59,6 +92,72 @@ async function handleChangePassword() {
             <span class="switch-thumb"></span>
           </span>
         </label>
+      </div>
+    </section>
+
+        <section class="settings-section panel">
+      <h2>Recordatorios</h2>
+
+      <p v-if="!pushSupported" class="theme-hint">
+        Este navegador no admite notificaciones push. En iPhone, primero instala la app en la
+        pantalla de inicio (Compartir → Añadir a pantalla de inicio) y ábrela desde ahí.
+      </p>
+      <p v-else-if="remindersLoading" class="theme-hint">Cargando...</p>
+      <p v-else-if="!pushServerEnabled" class="theme-hint">
+        Las notificaciones no están disponibles en este servidor.
+      </p>
+
+      <div v-else class="reminder-settings">
+        <div class="theme-row">
+          <div>
+            <p class="theme-label">Notificaciones en este dispositivo</p>
+            <p class="theme-hint">
+              {{ deviceSubscribed ? 'Activadas' : 'Desactivadas' }} ·
+              {{ subscribedDevices }} dispositivo{{ subscribedDevices === 1 ? '' : 's' }} en total
+            </p>
+          </div>
+          <label class="switch">
+            <input
+              type="checkbox"
+              class="switch-input"
+              :checked="deviceSubscribed"
+              :disabled="remindersBusy"
+              @change="setDeviceEnabled(($event.target as HTMLInputElement).checked)"
+            />
+            <span class="switch-track">
+              <span class="switch-thumb"></span>
+            </span>
+          </label>
+        </div>
+
+        <div class="theme-row">
+          <div>
+            <p class="theme-label">Recordatorio diario</p>
+            <p class="theme-hint">Solo si te quedan hábitos por marcar · Zona horaria: {{ timeZone }}</p>
+          </div>
+          <select
+            class="hour-select"
+            :value="reminderHour ?? ''"
+            :disabled="remindersBusy"
+            aria-label="Hora del recordatorio diario"
+            @change="onHourChange"
+          >
+            <option value="">Desactivado</option>
+            <option v-for="h in hours" :key="h" :value="h">{{ formatHour(h) }}</option>
+          </select>
+        </div>
+
+        <button
+          type="button"
+          class="secondary-button"
+          :disabled="remindersBusy || subscribedDevices === 0"
+          @click="sendTest"
+        >
+          Enviar notificación de prueba
+        </button>
+
+        <p v-if="remindersError" class="status-text status-text--error">{{ remindersError }}</p>
+        <p v-if="remindersInfo" class="status-text status-text--success">{{ remindersInfo }}</p>
       </div>
     </section>
 
@@ -212,6 +311,39 @@ input {
   padding: var(--space-2) var(--space-3);
   color: var(--color-ink);
   font-size: 0.9rem;
+}
+
+.reminder-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.hour-select {
+  border: 1px solid var(--color-stone);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border-radius: 6px;
+  /* Mismo truco que el filtro de categorias de HomeView: mas aire a la
+     derecha para que la flecha nativa no quede pegada al borde. */
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
+  font-size: 0.85rem;
+}
+
+.secondary-button {
+  align-self: flex-start;
+  border: 1px solid var(--color-moss);
+  background: transparent;
+  color: var(--color-moss);
+  border-radius: 6px;
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
+}
+
+.secondary-button:disabled {
+  border-color: var(--color-stone);
+  color: var(--color-ink-soft);
+  cursor: default;
 }
 
 .status-text {

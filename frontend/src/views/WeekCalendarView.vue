@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { habitApi } from '@/services/habitApi'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import type { HabitWeekEntry } from '@/types/habit'
+import { localIsoDate } from '@/utils/date'
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
@@ -15,8 +16,10 @@ function mondayOf(date: Date): Date {
   return d
 }
 
+// Fecha LOCAL, no UTC: con toISOString() la columna "hoy" y las claves de
+// cada celda se desplazaban un dia entre las 00:00 y las 02:00 en Madrid.
 function toISODate(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  return localIsoDate(date)
 }
 
 function isToday(date: Date): boolean {

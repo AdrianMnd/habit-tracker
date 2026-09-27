@@ -81,7 +81,9 @@ public class SecurityConfig {
                 )
                 .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
+                        // /api/internal/** no usa JWT: lo protege el secreto
+                        // X-Cron-Secret que comprueba InternalController.
+                        .requestMatchers("/api/auth/**", "/api/internal/**", "/actuator/health").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
